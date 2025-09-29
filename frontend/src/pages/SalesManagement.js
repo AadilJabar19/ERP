@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const SalesManagement = () => {
   const { hasRole } = useAuth();
@@ -348,88 +349,257 @@ const SalesManagement = () => {
     </div>
   );
 
-  const renderPipeline = () => (
-    <div>
-      <h3>Sales Pipeline</h3>
-      <div className="grid-stats">
-        {pipeline.map(stage => (
-          <div key={stage._id} className="card" style={{ margin: 0 }}>
-            <h4>{stage._id}</h4>
-            <p style={{ fontSize: '1.5rem', color: '#3498db' }}>{stage.count}</p>
-            <small>${(stage.totalValue || 0).toLocaleString()}</small>
+  const renderPipeline = () => {
+    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
+    
+    return (
+      <div>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+          📈 Sales Pipeline
+        </h3>
+        
+        <div className="grid-stats" style={{ marginBottom: '30px' }}>
+          {pipeline.map((stage, index) => (
+            <div key={stage._id} className="card" style={{ 
+              margin: 0, 
+              background: `linear-gradient(135deg, ${COLORS[index % COLORS.length]}22, ${COLORS[index % COLORS.length]}44)`,
+              border: `2px solid ${COLORS[index % COLORS.length]}`,
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '2rem', opacity: 0.3 }}>
+                {index === 0 ? '🎯' : index === 1 ? '📞' : index === 2 ? '📄' : index === 3 ? '🤝' : '🎆'}
+              </div>
+              <h4 style={{ color: COLORS[index % COLORS.length], margin: '0 0 10px 0' }}>{stage._id}</h4>
+              <p style={{ fontSize: '2rem', color: COLORS[index % COLORS.length], margin: '5px 0' }}>{stage.count}</p>
+              <small style={{ color: '#666' }}>${(stage.totalValue || 0).toLocaleString()}</small>
+            </div>
+          ))}
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📊 Pipeline Funnel
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={pipeline}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="_id" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#3498db" name="Leads" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        ))}
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              💰 Pipeline Value
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={pipeline}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="_id" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Value']} />
+                <Legend />
+                <Line type="monotone" dataKey="totalValue" stroke="#e74c3c" strokeWidth={3} name="Total Value" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  const renderAnalytics = () => (
-    <div>
-      <h3>Sales Analytics</h3>
-      <div className="grid-stats">
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Total Sales</h4>
-          <p style={{ fontSize: '2rem', color: '#3498db' }}>{analytics.totalSales || 0}</p>
+  const renderAnalytics = () => {
+    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
+    
+    const leadStatusData = analytics.leadsByStatus?.map(status => ({
+      name: status._id,
+      count: status.count
+    })) || [];
+    
+    const quoteStatusData = analytics.quotesByStatus?.map(status => ({
+      name: status._id,
+      count: status.count
+    })) || [];
+    
+    const monthlyData = analytics.monthlySales?.map(month => ({
+      month: month._id,
+      sales: month.totalSales || 0,
+      revenue: month.totalRevenue || 0
+    })) || [];
+    
+    return (
+      <div>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+          📊 Sales Analytics Dashboard
+        </h3>
+        
+        <div className="grid-stats" style={{ marginBottom: '30px' }}>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>💰</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Sales</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.totalSales || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>💵</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Revenue</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>${(analytics.totalRevenue || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>🎯</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Active Leads</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.leadsByStatus?.reduce((sum, status) => sum + status.count, 0) || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>📄</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Pending Quotes</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.quotesByStatus?.find(s => s._id === 'sent')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Total Revenue</h4>
-          <p style={{ fontSize: '2rem', color: '#28a745' }}>${(analytics.totalRevenue || 0).toLocaleString()}</p>
-        </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Active Leads</h4>
-          <p style={{ fontSize: '2rem', color: '#ffc107' }}>
-            {analytics.leadsByStatus?.reduce((sum, status) => sum + status.count, 0) || 0}
-          </p>
-        </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Pending Quotes</h4>
-          <p style={{ fontSize: '2rem', color: '#6f42c1' }}>
-            {analytics.quotesByStatus?.find(s => s._id === 'sent')?.count || 0}
-          </p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              🎯 Lead Status Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={leadStatusData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {leadStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📄 Quote Status Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={quoteStatusData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#2ecc71" name="Quotes" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📈 Monthly Sales Trend
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="sales" stroke="#3498db" strokeWidth={3} name="Sales Count" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              💰 Monthly Revenue Trend
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Revenue']} />
+                <Legend />
+                <Line type="monotone" dataKey="revenue" stroke="#e74c3c" strokeWidth={3} name="Revenue" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="page-container">
       <h1 className="page-title">Sales Management System</h1>
       
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 
           className={`btn ${activeTab === 'leads' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('leads')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Leads
+          🎯 Leads
         </button>
         <button 
           className={`btn ${activeTab === 'quotes' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('quotes')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Quotes
+          📄 Quotes
         </button>
         <button 
           className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('orders')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Orders
+          💰 Orders
         </button>
         <button 
           className={`btn ${activeTab === 'pipeline' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('pipeline')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Pipeline
+          📈 Pipeline
         </button>
         {hasRole(['admin', 'manager']) && (
           <button 
             className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('analytics')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            Analytics
+            📊 Analytics
           </button>
         )}
       </div>

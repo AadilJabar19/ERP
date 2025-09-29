@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Calendar = () => {
   const { hasRole } = useAuth();
   const [events, setEvents] = useState([]);
+  const [analytics, setAnalytics] = useState({});
+  const [activeTab, setActiveTab] = useState('calendar');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -17,8 +20,12 @@ const Calendar = () => {
   });
 
   useEffect(() => {
-    fetchEvents();
-  }, [currentDate]);
+    if (activeTab === 'calendar') {
+      fetchEvents();
+    } else if (activeTab === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [activeTab, currentDate]);
 
   const fetchEvents = async () => {
     try {
@@ -32,6 +39,18 @@ const Calendar = () => {
       setEvents(response.data);
     } catch (error) {
       console.error('Error fetching events:', error);
+    }
+  };
+  
+  const fetchAnalytics = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/events/analytics', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
     }
   };
 
@@ -92,14 +111,13 @@ const Calendar = () => {
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
 
-  return (
-    <div className="page-container">
-      <h1 className="page-title">Calendar</h1>
-      
+  const renderCalendar = () => (
+    <div>
       {hasRole(['admin', 'manager']) && (
         <button 
           className="btn btn-primary" 
           onClick={() => setShowForm(!showForm)}
+          style={{ marginBottom: '20px' }}
         >
           {showForm ? 'Cancel' : 'Add Event'}
         </button>
@@ -167,14 +185,16 @@ const Calendar = () => {
             className="btn btn-secondary"
             onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
           >
-            Previous
+            ← Previous
           </button>
-          <h2>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            📅 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </h2>
           <button 
             className="btn btn-secondary"
             onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
           >
-            Next
+            Next →
           </button>
         </div>
 
@@ -198,31 +218,181 @@ const Calendar = () => {
               {day && (
                 <>
                   <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{day}</div>
-                  {getEventsForDay(day).map(event => (
-                    <div 
-                      key={event._id} 
-                      style={{ 
-                        fontSize: '0.8rem', 
-                        padding: '2px 4px', 
-                        margin: '1px 0',
-                        backgroundColor: '#3498db', 
-                        color: 'white', 
-                        borderRadius: '3px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                      title={event.title}
-                    >
-                      {event.title}
-                    </div>
-                  ))}
+                  {getEventsForDay(day).map(event => {
+                    const eventColors = {
+                      meeting: '#3498db',
+                      holiday: '#e74c3c',
+                      deadline: '#f39c12',
+                      training: '#2ecc71',
+                      other: '#9b59b6'
+                    };
+                    return (
+                      <div 
+                        key={event._id} 
+                        style={{ 
+                          fontSize: '0.8rem', 
+                          padding: '2px 4px', 
+                          margin: '1px 0',
+                          backgroundColor: eventColors[event.type] || '#3498db', 
+                          color: 'white', 
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={`${event.title} (${event.type})`}
+                      >
+                        {event.type === 'meeting' ? '💼' : 
+                         event.type === 'holiday' ? '🎉' :
+                         event.type === 'deadline' ? '⏰' :
+                         event.type === 'training' ? '🎓' : '📅'} {event.title}
+                      </div>
+                    );
+                  })}
                 </>
               )}
             </div>
           ))}
         </div>
       </div>
+    </div>
+  );
+  
+  const renderAnalytics = () => {
+    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
+    
+    const eventTypeData = analytics.eventTypeStats?.map(type => ({
+      name: type._id,
+      count: type.count
+    })) || [];
+    
+    const monthlyData = analytics.monthlyStats?.map(month => ({
+      month: month._id,
+      events: month.count
+    })) || [];
+    
+    return (
+      <div>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+          📊 Calendar Analytics Dashboard
+        </h3>
+        
+        <div className="grid-stats" style={{ marginBottom: '30px' }}>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>📅</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Events</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.totalEvents || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>💼</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Meetings</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.eventTypeStats?.find(s => s._id === 'meeting')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>⏰</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Deadlines</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.eventTypeStats?.find(s => s._id === 'deadline')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>🎓</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Training Sessions</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.eventTypeStats?.find(s => s._id === 'training')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              🥧 Event Type Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={eventTypeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {eventTypeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📈 Monthly Event Trends
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="events" fill="#3498db" name="Events" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="page-container">
+      <h1 className="page-title">Calendar & Events</h1>
+      
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <button 
+          className={`btn ${activeTab === 'calendar' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('calendar')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          📅 Calendar
+        </button>
+        {hasRole(['admin', 'manager']) && (
+          <button 
+            className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('analytics')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            📊 Analytics
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'calendar' && renderCalendar()}
+      {activeTab === 'analytics' && renderAnalytics()}
     </div>
   );
 };

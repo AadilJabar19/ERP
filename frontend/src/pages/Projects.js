@@ -4,11 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Projects = () => {
   const { hasRole } = useAuth();
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [analytics, setAnalytics] = useState({});
+  const [activeTab, setActiveTab] = useState('projects');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,9 +22,13 @@ const Projects = () => {
   });
 
   useEffect(() => {
-    fetchProjects();
-    fetchEmployees();
-  }, []);
+    if (activeTab === 'projects') {
+      fetchProjects();
+      fetchEmployees();
+    } else if (activeTab === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [activeTab]);
 
   const fetchProjects = async () => {
     try {
@@ -46,6 +53,21 @@ const Projects = () => {
       setEmployees(response.data);
     } catch (error) {
       console.error('Error fetching employees:', error);
+    }
+  };
+  
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/projects/analytics', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,12 +109,10 @@ const Projects = () => {
     return colors[priority] || '#6c757d';
   };
 
-  return (
-    <div className="page-container">
-      <h1 className="page-title">Project Management</h1>
-      
+  const renderProjects = () => (
+    <div>
       {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ marginBottom: '20px' }}>
           Add Project
         </button>
       )}
@@ -175,6 +195,178 @@ const Projects = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+  
+  const renderAnalytics = () => {
+    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
+    
+    const statusData = analytics.statusStats?.map(status => ({
+      name: status._id,
+      count: status.count,
+      totalBudget: status.totalBudget || 0
+    })) || [];
+    
+    const priorityData = analytics.priorityStats?.map(priority => ({
+      name: priority._id,
+      count: priority.count
+    })) || [];
+    
+    const progressData = analytics.progressStats?.map(progress => ({
+      range: progress._id,
+      count: progress.count
+    })) || [];
+    
+    return (
+      <div>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+          📊 Project Analytics Dashboard
+        </h3>
+        
+        <div className="grid-stats" style={{ marginBottom: '30px' }}>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>📁</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Projects</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.totalProjects || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>✅</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Active Projects</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.statusStats?.find(s => s._id === 'active')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>💰</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Budget</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>${(analytics.totalBudget || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>📈</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Avg Progress</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{(analytics.avgProgress || 0).toFixed(1)}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📊 Project Status Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={statusData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#3498db" name="Projects" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              🥧 Priority Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={priorityData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {priorityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📈 Budget by Status
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={statusData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Budget']} />
+                <Legend />
+                <Line type="monotone" dataKey="totalBudget" stroke="#e74c3c" strokeWidth={3} name="Total Budget" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📉 Progress Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={progressData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="range" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#2ecc71" name="Projects" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <div className="page-container">
+      <h1 className="page-title">Project Management</h1>
+      
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <button 
+          className={`btn ${activeTab === 'projects' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('projects')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          📁 Projects
+        </button>
+        {hasRole(['admin', 'manager']) && (
+          <button 
+            className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('analytics')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            📊 Analytics
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'projects' && renderProjects()}
+      {activeTab === 'analytics' && renderAnalytics()}
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New Project">
         <form onSubmit={handleSubmit}>

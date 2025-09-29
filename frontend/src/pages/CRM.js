@@ -4,10 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const CRM = () => {
   const { hasRole } = useAuth();
   const [customers, setCustomers] = useState([]);
+  const [analytics, setAnalytics] = useState({});
+  const [activeTab, setActiveTab] = useState('customers');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,8 +24,12 @@ const CRM = () => {
   });
 
   useEffect(() => {
-    fetchCustomers();
-  }, [currentPage, searchTerm, filterStatus]);
+    if (activeTab === 'customers') {
+      fetchCustomers();
+    } else if (activeTab === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [activeTab, currentPage, searchTerm, filterStatus]);
 
   const fetchCustomers = async () => {
     try {
@@ -43,6 +50,21 @@ const CRM = () => {
       setTotalPages(response.data.totalPages);
     } catch (error) {
       console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/customers/analytics', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
     }
@@ -77,12 +99,10 @@ const CRM = () => {
     return colors[category] || '#6c757d';
   };
 
-  return (
-    <div className="page-container">
-      <h1 className="page-title">Customer Relationship Management</h1>
-      
+  const renderCustomers = () => (
+    <div>
       {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ marginBottom: '20px' }}>
           Add Customer
         </button>
       )}
@@ -170,6 +190,141 @@ const CRM = () => {
           </>
         )}
       </div>
+    </div>
+  );
+  
+  const renderAnalytics = () => {
+    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
+    
+    const categoryData = analytics.categoryStats?.map(cat => ({
+      name: cat._id,
+      count: cat.count,
+      totalCredit: cat.totalCreditLimit || 0
+    })) || [];
+    
+    const statusData = analytics.statusStats?.map(status => ({
+      name: status._id,
+      count: status.count
+    })) || [];
+    
+    return (
+      <div>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+          📊 CRM Analytics Dashboard
+        </h3>
+        
+        <div className="grid-stats" style={{ marginBottom: '30px' }}>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>🏢</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Customers</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.totalCustomers || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>✅</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Active Customers</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.statusStats?.find(s => s._id === 'active')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>💳</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Credit Limit</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>${(analytics.totalCreditLimit || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>📈</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Avg Credit Limit</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>${(analytics.avgCreditLimit || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📊 Customer Categories
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={categoryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#3498db" name="Customers" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              🥧 Customer Status Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {statusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <div className="page-container">
+      <h1 className="page-title">Customer Relationship Management</h1>
+      
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <button 
+          className={`btn ${activeTab === 'customers' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('customers')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          🏢 Customers
+        </button>
+        {hasRole(['admin', 'manager']) && (
+          <button 
+            className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('analytics')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            📊 Analytics
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'customers' && renderCustomers()}
+      {activeTab === 'analytics' && renderAnalytics()}
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New Customer">
         <form onSubmit={handleSubmit}>

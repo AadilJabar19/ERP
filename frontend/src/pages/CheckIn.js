@@ -52,62 +52,170 @@ const CheckIn = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Employee Check-In/Out</h1>
+      <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+        ⏱️ Employee Check-In/Out
+      </h1>
       
-      <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
-        <h3 style={{ textAlign: 'center' }}>Quick Attendance</h3>
+      <div className="card" style={{ 
+        maxWidth: '500px', 
+        margin: '0 auto',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+      }}>
+        <h3 style={{ textAlign: 'center', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+          📅 Quick Attendance Portal
+        </h3>
         
         <form>
           <div className="form-group">
-            <label>Employee ID:</label>
+            <label style={{ color: 'white', fontWeight: 'bold' }}>Employee ID:</label>
             <input
               type="text"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               placeholder="Enter your Employee ID"
-              style={{ fontSize: '1.2rem', padding: '15px', textAlign: 'center' }}
+              style={{ 
+                fontSize: '1.2rem', 
+                padding: '15px', 
+                textAlign: 'center',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.1)',
+                color: 'white',
+                backdropFilter: 'blur(10px)'
+              }}
               disabled={isLoading}
             />
           </div>
           
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '15px', marginTop: '25px' }}>
             <button 
               type="button"
-              className="btn btn-success" 
+              className="btn" 
               onClick={handleCheckIn}
               disabled={isLoading}
-              style={{ flex: 1, padding: '15px', fontSize: '1.1rem' }}
+              style={{ 
+                flex: 1, 
+                padding: '15px', 
+                fontSize: '1.1rem',
+                background: 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 15px rgba(46, 204, 113, 0.4)'
+              }}
             >
-              {isLoading ? 'Processing...' : 'Check In'}
+              {isLoading ? '⏳ Processing...' : '✅ Check In'}
             </button>
             <button 
               type="button"
-              className="btn btn-primary" 
+              className="btn" 
               onClick={handleCheckOut}
               disabled={isLoading}
-              style={{ flex: 1, padding: '15px', fontSize: '1.1rem' }}
+              style={{ 
+                flex: 1, 
+                padding: '15px', 
+                fontSize: '1.1rem',
+                background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 15px rgba(52, 152, 219, 0.4)'
+              }}
             >
-              {isLoading ? 'Processing...' : 'Check Out'}
+              {isLoading ? '⏳ Processing...' : '⏹️ Check Out'}
             </button>
           </div>
         </form>
         
         {message && (
           <div style={{ 
-            marginTop: '20px', 
-            padding: '10px', 
-            borderRadius: '4px',
-            backgroundColor: message.includes('successful') ? '#d4edda' : '#f8d7da',
-            color: message.includes('successful') ? '#155724' : '#721c24',
+            marginTop: '25px', 
+            padding: '15px', 
+            borderRadius: '8px',
+            background: message.includes('successful') 
+              ? 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)' 
+              : 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+            color: 'white',
             textAlign: 'center',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
           }}>
-            {message}
+            {message.includes('successful') ? '✅' : '❌'} {message}
           </div>
         )}
         
-        <div style={{ marginTop: '20px', fontSize: '0.9rem', color: '#666', textAlign: 'center' }}>
-          <p>Current Time: {new Date().toLocaleString()}</p>
+        <div style={{ 
+          marginTop: '25px', 
+          padding: '15px',
+          background: 'rgba(255,255,255,0.1)',
+          borderRadius: '8px',
+          textAlign: 'center',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <p style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            🕰️ Current Time: {new Date().toLocaleString()}
+          </p>
+          <p style={{ margin: '10px 0 0 0', fontSize: '0.9rem', opacity: 0.8 }}>
+            📍 Make sure to check in when you arrive and check out when you leave
+          </p>
+        </div>
+      </div>
+      
+      <div style={{ 
+        maxWidth: '500px', 
+        margin: '20px auto 0',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+        gap: '15px'
+      }}>
+        <div className="card" style={{ 
+          margin: 0,
+          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+          color: 'white',
+          textAlign: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Check In</div>
+          <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Start your day</div>
+        </div>
+        <div className="card" style={{ 
+          margin: 0,
+          background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+          color: 'white',
+          textAlign: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '5px' }}>⏹️</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Check Out</div>
+          <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>End your day</div>
+        </div>
+        <div className="card" style={{ 
+          margin: 0,
+          background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+          color: 'white',
+          textAlign: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '5px' }}>📈</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Track Time</div>
+          <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Monitor hours</div>
         </div>
       </div>
     </div>

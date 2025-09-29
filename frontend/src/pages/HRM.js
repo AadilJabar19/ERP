@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const HRM = () => {
   const { hasRole } = useAuth();
@@ -339,68 +340,187 @@ const HRM = () => {
     </div>
   );
 
-  const renderAnalytics = () => (
-    <div>
-      <h3>HRM Analytics</h3>
-      <div className="grid-stats">
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Total Employees</h4>
-          <p style={{ fontSize: '2rem', color: '#3498db' }}>{analytics.totalEmployees || 0}</p>
+  const renderAnalytics = () => {
+    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
+    
+    const departmentData = analytics.departmentStats?.map(dept => ({
+      name: dept._id,
+      employees: dept.count,
+      avgSalary: dept.avgSalary || 0
+    })) || [];
+    
+    const leaveData = analytics.leaveStats?.map(leave => ({
+      name: leave._id,
+      count: leave.count
+    })) || [];
+    
+    const trainingData = analytics.trainingStats?.map(training => ({
+      name: training._id,
+      count: training.count
+    })) || [];
+    
+    return (
+      <div>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+          👥 HRM Analytics Dashboard
+        </h3>
+        
+        <div className="grid-stats" style={{ marginBottom: '30px' }}>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>👥</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Employees</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.totalEmployees || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>📋</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Pending Leaves</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.leaveStats?.find(s => s._id === 'pending')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>🎓</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Active Trainings</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.trainingStats?.find(s => s._id === 'active')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>🏢</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Departments</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.departmentStats?.length || 0}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Pending Leaves</h4>
-          <p style={{ fontSize: '2rem', color: '#ffc107' }}>
-            {analytics.leaveStats?.find(s => s._id === 'pending')?.count || 0}
-          </p>
-        </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Active Trainings</h4>
-          <p style={{ fontSize: '2rem', color: '#28a745' }}>
-            {analytics.trainingStats?.find(s => s._id === 'active')?.count || 0}
-          </p>
-        </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Departments</h4>
-          <p style={{ fontSize: '2rem', color: '#6f42c1' }}>
-            {analytics.departmentStats?.length || 0}
-          </p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📊 Department Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={departmentData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="employees" fill="#3498db" name="Employees" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              🥧 Leave Status Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={leaveData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {leaveData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📈 Training Programs
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={trainingData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#2ecc71" name="Programs" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              💰 Average Salary by Department
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={departmentData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Avg Salary']} />
+                <Legend />
+                <Line type="monotone" dataKey="avgSalary" stroke="#e74c3c" strokeWidth={3} name="Avg Salary" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="page-container">
       <h1 className="page-title">Human Resource Management</h1>
       
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 
           className={`btn ${activeTab === 'employees' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('employees')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Employees
+          👥 Employees
         </button>
         <button 
           className={`btn ${activeTab === 'leaves' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('leaves')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Leave Management
+          📋 Leave Management
         </button>
         <button 
           className={`btn ${activeTab === 'training' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('training')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Training
+          🎓 Training
         </button>
         {hasRole(['admin', 'manager']) && (
           <button 
             className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('analytics')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            Analytics
+            📊 Analytics
           </button>
         )}
       </div>

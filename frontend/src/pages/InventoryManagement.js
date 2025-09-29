@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const InventoryManagement = () => {
   const { hasRole } = useAuth();
@@ -461,76 +462,198 @@ const InventoryManagement = () => {
     </div>
   );
 
-  const renderAnalytics = () => (
-    <div>
-      <h3>Inventory Analytics</h3>
-      <div className="grid-stats">
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Total Products</h4>
-          <p style={{ fontSize: '2rem', color: '#3498db' }}>{analytics.totalProducts || 0}</p>
+  const renderAnalytics = () => {
+    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
+    
+    const categoryData = analytics.categoryStats?.map(cat => ({
+      name: cat._id,
+      products: cat.count,
+      value: cat.totalValue || 0
+    })) || [];
+    
+    const warehouseData = analytics.warehouseStats?.map(wh => ({
+      name: wh._id,
+      products: wh.productCount || 0,
+      capacity: wh.capacity || 0
+    })) || [];
+    
+    const stockData = [
+      { name: 'In Stock', count: analytics.inStockProducts || 0 },
+      { name: 'Low Stock', count: analytics.lowStockProducts || 0 },
+      { name: 'Out of Stock', count: analytics.outOfStockProducts || 0 }
+    ];
+    
+    return (
+      <div>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+          📦 Inventory Analytics Dashboard
+        </h3>
+        
+        <div className="grid-stats" style={{ marginBottom: '30px' }}>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>📦</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Products</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.totalProducts || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>💰</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Value</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>${(analytics.totalValue || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>⚠️</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Low Stock Items</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.lowStockProducts || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '2rem' }}>🏢</span>
+              <div>
+                <h4 style={{ margin: 0, color: 'white' }}>Warehouses</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.warehouseStats?.length || 0}</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Total Inventory Value</h4>
-          <p style={{ fontSize: '2rem', color: '#28a745' }}>${(analytics.totalValue || 0).toLocaleString()}</p>
-        </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Low Stock Items</h4>
-          <p style={{ fontSize: '2rem', color: '#ffc107' }}>{analytics.lowStockProducts || 0}</p>
-        </div>
-        <div className="card" style={{ margin: 0 }}>
-          <h4>Warehouses</h4>
-          <p style={{ fontSize: '2rem', color: '#6f42c1' }}>{analytics.warehouseStats?.length || 0}</p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📊 Products by Category
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={categoryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="products" fill="#3498db" name="Products" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              🥧 Stock Status Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={stockData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {stockData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📈 Warehouse Capacity
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={warehouseData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="products" fill="#2ecc71" name="Products" />
+                <Bar dataKey="capacity" fill="#e74c3c" name="Capacity" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="card">
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              💰 Category Value Distribution
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={categoryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Value']} />
+                <Legend />
+                <Line type="monotone" dataKey="value" stroke="#e74c3c" strokeWidth={3} name="Total Value" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="page-container">
       <h1 className="page-title">Inventory Management System</h1>
       
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 
           className={`btn ${activeTab === 'products' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('products')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Products
+          📦 Products
         </button>
         <button 
           className={`btn ${activeTab === 'warehouses' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('warehouses')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Warehouses
+          🏢 Warehouses
         </button>
         <button 
           className={`btn ${activeTab === 'categories' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('categories')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Categories
+          📊 Categories
         </button>
         <button 
           className={`btn ${activeTab === 'movements' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('movements')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Stock Movements
+          🔄 Stock Movements
         </button>
         <button 
           className={`btn ${activeTab === 'alerts' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('alerts')}
-          style={{ marginRight: '10px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Alerts
+          ⚠️ Alerts
         </button>
         {hasRole(['admin', 'manager']) && (
           <button 
             className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('analytics')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            Analytics
+            📊 Analytics
           </button>
         )}
       </div>
