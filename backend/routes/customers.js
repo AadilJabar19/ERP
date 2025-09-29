@@ -65,15 +65,28 @@ router.put('/:id', auth, roleAuth(['admin', 'manager']), async (req, res) => {
 router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
     const totalCustomers = await Customer.countDocuments();
-    const activeCustomers = await Customer.countDocuments({ status: 'active' });
-    const customersByCategory = await Customer.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } }
+    const statusStats = await Customer.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+    
+    const categoryStats = await Customer.aggregate([
+      { $group: { 
+        _id: '$category', 
+        count: { $sum: 1 },
+        totalCreditLimit: { $sum: '$creditLimit' }
+      }}
+    ]);
+    
+    const creditStats = await Customer.aggregate([
+      { $group: { _id: null, total: { $sum: '$creditLimit' }, avg: { $avg: '$creditLimit' } } }
     ]);
     
     res.json({
       totalCustomers,
-      activeCustomers,
-      customersByCategory
+      statusStats,
+      categoryStats,
+      totalCreditLimit: creditStats[0]?.total || 0,
+      avgCreditLimit: creditStats[0]?.avg || 0
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

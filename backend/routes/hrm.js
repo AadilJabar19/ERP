@@ -187,9 +187,16 @@ router.post('/training/:id/enroll', auth, async (req, res) => {
 router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
     const totalEmployees = await Employee.countDocuments({ status: 'active' });
+    
     const departmentStats = await Employee.aggregate([
       { $match: { status: 'active' } },
-      { $group: { _id: '$employment.department', count: { $sum: 1 } } }
+      { 
+        $group: { 
+          _id: '$employment.department', 
+          count: { $sum: 1 },
+          avgSalary: { $avg: '$compensation.baseSalary' }
+        } 
+      }
     ]);
     
     const leaveStats = await Leave.aggregate([

@@ -216,19 +216,32 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
       $expr: { $lte: ['$totalQuantity', '$inventory.stockLevels.reorderPoint'] }
     }).countDocuments();
     
+    const outOfStockProducts = await Product.countDocuments({
+      status: 'active',
+      totalQuantity: 0
+    });
+    
+    const inStockProducts = totalProducts - lowStockProducts - outOfStockProducts;
+    
     const categoryStats = await Product.aggregate([
       { $match: { status: 'active' } },
       { $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'categoryInfo' } },
-      { $group: { _id: '$categoryInfo.name', count: { $sum: 1 }, value: { $sum: { $multiply: ['$totalQuantity', '$pricing.cost'] } } } }
+      { $unwind: '$categoryInfo' },
+      { $group: { 
+        _id: '$categoryInfo.name', 
+        count: { $sum: 1 }, 
+        totalValue: { $sum: { $multiply: ['$totalQuantity', '$pricing.cost'] } } 
+      }}
     ]);
     
     const warehouseStats = await Product.aggregate([
       { $unwind: '$inventory.locations' },
       { $lookup: { from: 'warehouses', localField: 'inventory.locations.warehouse', foreignField: '_id', as: 'warehouseInfo' } },
+      { $unwind: '$warehouseInfo' },
       { $group: { 
         _id: '$warehouseInfo.name', 
-        totalProducts: { $sum: 1 },
-        totalQuantity: { $sum: '$inventory.locations.quantity' }
+        productCount: { $sum: 1 },
+        capacity: { $first: '$warehouseInfo.capacity.totalSpace' }
       }}
     ]);
     
@@ -236,6 +249,8 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
       totalProducts,
       totalValue: totalValue[0]?.total || 0,
       lowStockProducts,
+      outOfStockProducts,
+      inStockProducts,
       categoryStats,
       warehouseStats
     });

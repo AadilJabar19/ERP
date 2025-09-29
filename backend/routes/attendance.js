@@ -99,4 +99,68 @@ router.post('/', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   }
 });
 
+// Get attendance analytics
+router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const totalRecords = await Attendance.countDocuments();
+    
+    const statusStats = await Attendance.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+    
+    const avgWorkingHours = await Attendance.aggregate([
+      { $match: { workingHours: { $exists: true } } },
+      { $group: { _id: null, avg: { $avg: '$workingHours' } } }
+    ]);
+    
+    const dailyStats = await Attendance.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+          present: { $sum: { $cond: [{ $eq: ['$status', 'present'] }, 1, 0] } },
+          late: { $sum: { $cond: [{ $eq: ['$status', 'late'] }, 1, 0] } },
+          absent: { $sum: { $cond: [{ $eq: ['$status', 'absent'] }, 1, 0] } }
+        }
+      },
+      { $sort: { _id: -1 } },
+      { $limit: 30 }
+    ]);
+    
+    const departmentStats = await Attendance.aggregate([
+      { $lookup: { from: 'employees', localField: 'employee', foreignField: '_id', as: 'empInfo' } },
+      { $unwind: '$empInfo' },
+      {
+        $group: {
+          _id: '$empInfo.employment.department',
+          avgWorkingHours: { $avg: '$workingHours' },
+          attendanceRate: { $avg: { $cond: [{ $ne: ['$status', 'absent'] }, 100, 0] } }
+        }
+      }
+    ]);
+    
+    const overallAttendanceRate = await Attendance.aggregate([
+      {
+        $group: {
+          _id: null,
+          rate: { $avg: { $cond: [{ $ne: ['$status', 'absent'] }, 100, 0] } }
+        }
+      }
+    ]);
+    
+    const totalLateArrivals = await Attendance.countDocuments({ status: 'late' });
+    
+    res.json({
+      totalRecords,
+      statusStats,
+      avgWorkingHours: avgWorkingHours[0]?.avg || 0,
+      dailyStats,
+      departmentStats,
+      overallAttendanceRate: overallAttendanceRate[0]?.rate || 0,
+      totalLateArrivals
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

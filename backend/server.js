@@ -69,6 +69,11 @@ app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/hrm', require('./routes/hrm'));
+try {
+  app.use('/api/dashboard', require('./routes/dashboard'));
+} catch (error) {
+  console.error('Error loading dashboard route:', error);
+}
 console.log('All routes loaded successfully');
 
 app.get('/', (req, res) => {

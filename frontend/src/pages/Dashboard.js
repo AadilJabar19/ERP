@@ -16,84 +16,71 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    fetchStats();
-    fetchRecentActivity();
-    fetchChartData();
-    const interval = setInterval(fetchStats, 30000);
+    fetchAllData();
+    const interval = setInterval(fetchAllData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchChartData = async () => {
-    setChartData({
-      salesTrend: [
-        { month: 'Jan', sales: 4000, revenue: 24000 },
-        { month: 'Feb', sales: 3000, revenue: 18000 },
-        { month: 'Mar', sales: 5000, revenue: 30000 },
-        { month: 'Apr', sales: 4500, revenue: 27000 },
-        { month: 'May', sales: 6000, revenue: 36000 },
-        { month: 'Jun', sales: 5500, revenue: 33000 }
-      ],
-      departmentStats: [
-        { name: 'IT', employees: 25, fill: '#8884d8' },
-        { name: 'Sales', employees: 30, fill: '#82ca9d' },
-        { name: 'HR', employees: 15, fill: '#ffc658' },
-        { name: 'Finance', employees: 20, fill: '#ff7300' }
-      ],
-      inventoryStatus: [
-        { status: 'In Stock', count: 150, fill: '#00C49F' },
-        { status: 'Low Stock', count: 25, fill: '#FFBB28' },
-        { status: 'Out of Stock', count: 10, fill: '#FF8042' }
-      ],
-      revenueByMonth: [
-        { month: 'Jan', revenue: 24000 },
-        { month: 'Feb', revenue: 18000 },
-        { month: 'Mar', revenue: 30000 },
-        { month: 'Apr', revenue: 27000 },
-        { month: 'May', revenue: 36000 },
-        { month: 'Jun', revenue: 33000 }
-      ]
-    });
-  };
-
-  const fetchStats = async () => {
+  const fetchAllData = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const headers = { Authorization: `Bearer ${token}` };
-      const responses = await Promise.allSettled([
-        axios.get('/api/employees', { headers }),
-        axios.get('/api/inventory', { headers }),
-        axios.get('/api/sales', { headers })
-      ]);
-      
-      const [employeesRes, productsRes, salesRes] = responses;
-      const employeesData = employeesRes.status === 'fulfilled' ? employeesRes.value.data : [];
-      const productsData = productsRes.status === 'fulfilled' ? productsRes.value.data : [];
-      const salesData = salesRes.status === 'fulfilled' ? salesRes.value.data : [];
-      
-      const revenue = salesData.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
-
-      setStats({
-        employees: employeesData.length,
-        products: productsData.length,
-        sales: salesData.length,
-        revenue: revenue
+      const response = await axios.get('/api/dashboard/analytics', {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      
+      const data = response.data;
+      
+      // Set stats
+      setStats({
+        employees: data.overview?.totalEmployees || 0,
+        products: data.overview?.totalProducts || 0,
+        sales: data.overview?.totalSales || 0,
+        revenue: data.overview?.totalRevenue || 0
+      });
+      
+      // Set chart data
+      setChartData({
+        salesTrend: data.trends?.monthlySales || [],
+        departmentStats: data.trends?.departmentStats?.map((dept, index) => ({
+          name: dept._id,
+          employees: dept.count,
+          fill: ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'][index % 5]
+        })) || [],
+        inventoryStatus: [
+          { status: 'In Stock', count: data.overview?.totalProducts - (data.alerts?.lowStockProducts?.length || 0), fill: '#00C49F' },
+          { status: 'Low Stock', count: data.alerts?.lowStockProducts?.length || 0, fill: '#FFBB28' },
+          { status: 'Out of Stock', count: 0, fill: '#FF8042' }
+        ],
+        revenueByMonth: data.trends?.monthlySales || []
+      });
+      
+      // Set recent activity
+      const activities = [
+        ...(data.recentActivity?.recentSales?.map(sale => ({
+          type: 'Sale',
+          description: `Sale to ${sale.customer?.companyName || 'Customer'} - $${sale.totalAmount}`,
+          timestamp: new Date(sale.saleDate)
+        })) || []),
+        ...(data.recentActivity?.recentLeads?.map(lead => ({
+          type: 'Lead',
+          description: `New lead: ${lead.contact?.company || 'Company'} - ${lead.status}`,
+          timestamp: new Date(lead.createdAt)
+        })) || []),
+        ...(data.alerts?.lowStockProducts?.map(product => ({
+          type: 'Inventory',
+          description: `Low stock alert - ${product.name}`,
+          timestamp: new Date()
+        })) || [])
+      ];
+      
+      setRecentActivity(activities.slice(0, 5));
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchRecentActivity = async () => {
-    // Mock recent activity - in real app, this would come from backend
-    setRecentActivity([
-      { type: 'Employee', description: 'New employee added', timestamp: new Date() },
-      { type: 'Sale', description: 'Sale completed - $500', timestamp: new Date(Date.now() - 3600000) },
-      { type: 'Inventory', description: 'Low stock alert - Product ABC', timestamp: new Date(Date.now() - 7200000) }
-    ]);
   };
 
   return (

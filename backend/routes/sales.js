@@ -174,6 +174,23 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
           revenue: { $sum: '$totalAmount' }
         }
       },
+      {
+        $project: {
+          month: {
+            $concat: [
+              { $toString: '$_id.year' },
+              '-',
+              { $cond: [
+                { $lt: ['$_id.month', 10] },
+                { $concat: ['0', { $toString: '$_id.month' }] },
+                { $toString: '$_id.month' }
+              ]}
+            ]
+          },
+          sales: '$count',
+          revenue: '$revenue'
+        }
+      },
       { $sort: { '_id.year': -1, '_id.month': -1 } },
       { $limit: 12 }
     ]);

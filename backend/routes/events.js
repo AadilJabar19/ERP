@@ -55,4 +55,55 @@ router.delete('/:id', auth, roleAuth(['admin', 'manager']), async (req, res) => 
   }
 });
 
+// Get event analytics
+router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const [eventStats] = await Event.aggregate([
+      {
+        $facet: {
+          totalCount: [{ $count: 'total' }],
+          typeStats: [{ $group: { _id: '$type', count: { $sum: 1 } } }],
+          monthlyStats: [
+      {
+        $group: {
+          _id: {
+            year: { $year: '$startDate' },
+            month: { $month: '$startDate' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          month: {
+            $concat: [
+              { $toString: '$_id.year' },
+              '-',
+              { $cond: [
+                { $lt: ['$_id.month', 10] },
+                { $concat: ['0', { $toString: '$_id.month' }] },
+                { $toString: '$_id.month' }
+              ]}
+            ]
+          },
+          count: 1
+        }
+      },
+            { $sort: { '_id.year': -1, '_id.month': -1 } },
+            { $limit: 12 }
+          ]
+        }
+      }
+    ]);
+    
+    res.json({
+      totalEvents: eventStats.totalCount[0]?.total || 0,
+      eventTypeStats: eventStats.typeStats,
+      monthlyStats: eventStats.monthlyStats
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

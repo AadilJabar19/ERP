@@ -46,17 +46,52 @@ router.put('/:id', auth, roleAuth(['admin', 'manager']), async (req, res) => {
 router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
     const totalProjects = await Project.countDocuments();
-    const activeProjects = await Project.countDocuments({ status: 'active' });
-    const completedProjects = await Project.countDocuments({ status: 'completed' });
     const totalBudget = await Project.aggregate([
       { $group: { _id: null, total: { $sum: '$budget' } } }
     ]);
     
+    const avgProgress = await Project.aggregate([
+      { $group: { _id: null, avg: { $avg: '$progress' } } }
+    ]);
+    
+    const statusStats = await Project.aggregate([
+      { $group: { 
+        _id: '$status', 
+        count: { $sum: 1 },
+        totalBudget: { $sum: '$budget' }
+      }}
+    ]);
+    
+    const priorityStats = await Project.aggregate([
+      { $group: { _id: '$priority', count: { $sum: 1 } } }
+    ]);
+    
+    const progressStats = await Project.aggregate([
+      {
+        $group: {
+          _id: {
+            $switch: {
+              branches: [
+                { case: { $lt: ['$progress', 25] }, then: '0-25%' },
+                { case: { $lt: ['$progress', 50] }, then: '25-50%' },
+                { case: { $lt: ['$progress', 75] }, then: '50-75%' },
+                { case: { $lt: ['$progress', 100] }, then: '75-99%' }
+              ],
+              default: '100%'
+            }
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
     res.json({
       totalProjects,
-      activeProjects,
-      completedProjects,
-      totalBudget: totalBudget[0]?.total || 0
+      totalBudget: totalBudget[0]?.total || 0,
+      avgProgress: avgProgress[0]?.avg || 0,
+      statusStats,
+      priorityStats,
+      progressStats
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
