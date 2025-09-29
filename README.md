@@ -74,6 +74,15 @@ npm run dev
 ```bash
 cd frontend
 npm install
+```
+
+Create `.env` file:
+```env
+REACT_APP_API_URL=http://localhost:5000
+```
+
+Start frontend:
+```bash
 npm start
 ```
 
@@ -117,23 +126,60 @@ mini-erp-mern/
 - `POST /api/auth/register` - User registration
 - `GET /api/csrf-token` - Get CSRF token
 
+### Dashboard
+- `GET /api/dashboard/analytics` - Get comprehensive dashboard analytics
+
 ### HRM
 - `GET /api/hrm/employees` - Get employees
 - `POST /api/hrm/employees` - Create employee
 - `GET /api/hrm/leaves` - Get leave requests
 - `POST /api/hrm/leaves` - Apply for leave
+- `GET /api/hrm/analytics` - Get HRM analytics
 
 ### Inventory
 - `GET /api/inventory/products` - Get products
 - `POST /api/inventory/products` - Create product
 - `GET /api/inventory/warehouses` - Get warehouses
 - `POST /api/inventory/stock-movements` - Record stock movement
+- `GET /api/inventory/analytics` - Get inventory analytics
+- `GET /api/inventory/alerts` - Get stock alerts
 
 ### Sales
 - `GET /api/sales/leads` - Get leads
 - `POST /api/sales/leads` - Create lead
 - `GET /api/sales/quotes` - Get quotes
 - `POST /api/sales/quotes` - Create quote
+- `GET /api/sales/analytics` - Get sales analytics
+- `GET /api/sales/pipeline` - Get sales pipeline
+
+### CRM
+- `GET /api/customers` - Get customers
+- `POST /api/customers` - Create customer
+- `GET /api/customers/analytics` - Get customer analytics
+
+### Projects
+- `GET /api/projects` - Get projects
+- `POST /api/projects` - Create project
+- `GET /api/projects/analytics` - Get project analytics
+
+### Attendance
+- `GET /api/attendance` - Get attendance records
+- `POST /api/attendance/checkin` - Check in
+- `POST /api/attendance/checkout` - Check out
+- `GET /api/attendance/analytics` - Get attendance analytics
+
+### Events
+- `GET /api/events` - Get events
+- `POST /api/events` - Create event
+- `GET /api/events/analytics` - Get event analytics
+
+## 📊 Analytics & Reporting
+
+- **Dynamic Dashboard** - Real-time overview with interactive charts
+- **Module Analytics** - Comprehensive analytics for each module
+- **Interactive Charts** - Line, Bar, and Pie charts using Recharts
+- **Performance Metrics** - KPIs and trend analysis
+- **Real-time Data** - Live updates from database
 
 ## 🔄 Real-time Events
 
@@ -155,14 +201,22 @@ mini-erp-mern/
 ## 🚀 Deployment
 
 ### Backend Deployment
-1. Set environment variables
-2. Configure MongoDB connection
-3. Deploy to your preferred platform (Heroku, AWS, etc.)
+1. Set environment variables:
+   ```env
+   MONGODB_URI=your-production-mongodb-uri
+   JWT_SECRET=your-production-jwt-secret
+   SESSION_SECRET=your-production-session-secret
+   PORT=5000
+   ```
+2. Deploy to your preferred platform (Heroku, AWS, etc.)
 
 ### Frontend Deployment
-1. Build the project: `npm run build`
-2. Deploy build folder to static hosting (Netlify, Vercel, etc.)
-3. Update API endpoints for production
+1. Update `.env` for production:
+   ```env
+   REACT_APP_API_URL=https://your-backend-domain.com
+   ```
+2. Build the project: `npm run build`
+3. Deploy build folder to static hosting (Netlify, Vercel, etc.)
 
 ## 🤝 Contributing
 
@@ -182,4 +236,17 @@ For support and questions, please open an issue in the GitHub repository.
 
 ---
 
-**Built with ❤️ using the MERN Stack**
+## 🎯 Key Features Implemented
+
+- ✅ **Dynamic Analytics** - All data fetched from database in real-time
+- ✅ **Interactive Charts** - Recharts integration with live data
+- ✅ **Performance Optimized** - Consolidated API calls and efficient queries
+- ✅ **Modern UI/UX** - Enhanced with icons, gradients, and responsive design
+- ✅ **Error Handling** - Comprehensive error handling and fallbacks
+- ✅ **Environment Configuration** - Configurable API endpoints
+- ✅ **Real-time Updates** - WebSocket integration for live notifications
+- ✅ **Role-based Access** - Admin, Manager, Employee permissions
+- ✅ **CSRF Protection** - Enterprise-level security
+- ✅ **Comprehensive Modules** - HRM, Inventory, Sales, CRM, Projects, Calendar, Attendance
+
+**Built with ❤️ using the MERN Stack + Recharts**
