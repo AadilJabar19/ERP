@@ -42,6 +42,16 @@ router.get('/employees', auth, async (req, res) => {
   }
 });
 
+router.post('/employees', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const employee = new Employee(req.body);
+    await employee.save();
+    res.status(201).json(employee);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // Leave Management Routes
 router.get('/leaves', auth, async (req, res) => {
   try {
@@ -186,26 +196,30 @@ router.post('/training/:id/enroll', auth, async (req, res) => {
 // HRM Analytics
 router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
-    const totalEmployees = await Employee.countDocuments({ status: 'active' });
-    
-    const departmentStats = await Employee.aggregate([
-      { $match: { status: 'active' } },
-      { 
-        $group: { 
-          _id: '$employment.department', 
-          count: { $sum: 1 },
-          avgSalary: { $avg: '$compensation.baseSalary' }
-        } 
-      }
+    const [employeeAnalytics, leaveStats, trainingStats] = await Promise.all([
+      Employee.aggregate([
+        { $match: { status: 'active' } },
+        {
+          $facet: {
+            totalCount: [{ $count: 'count' }],
+            departmentStats: [
+              {
+                $group: {
+                  _id: '$employment.department',
+                  count: { $sum: 1 },
+                  avgSalary: { $avg: '$compensation.baseSalary' }
+                }
+              }
+            ]
+          }
+        }
+      ]),
+      Leave.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Training.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }])
     ]);
     
-    const leaveStats = await Leave.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]);
-    
-    const trainingStats = await Training.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]);
+    const totalEmployees = employeeAnalytics[0]?.totalCount[0]?.count || 0;
+    const departmentStats = employeeAnalytics[0]?.departmentStats || [];
     
     res.json({
       totalEmployees,

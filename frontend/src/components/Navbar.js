@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ChangePassword from './ChangePassword';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const { user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
 
@@ -41,8 +43,13 @@ const Navbar = () => {
       </button>
       <nav className={`navbar ${isOpen ? 'navbar-open' : ''}`}>
         <h2>Mini ERP</h2>
-        <div style={{ padding: '10px 20px', fontSize: '0.9rem', color: '#bdc3c7' }}>
-          {user.name} ({user.role})
+        <div style={{ padding: '10px 20px', fontSize: '0.9rem', color: '#bdc3c7', borderBottom: '1px solid #34495e' }}>
+          <div>{user.name} ({user.role})</div>
+          {user.lastLogin && (
+            <div style={{ fontSize: '0.8rem', marginTop: '5px' }}>
+              Last login: {new Date(user.lastLogin).toLocaleDateString()}
+            </div>
+          )}
         </div>
         <ul className="nav-links">
           <li><Link to="/" onClick={() => setIsOpen(false)}>📊 Dashboard</Link></li>
@@ -61,10 +68,14 @@ const Navbar = () => {
           {hasRole(['admin', 'manager']) && (
             <li><Link to="/attendance" onClick={() => setIsOpen(false)}>⏰ Attendance</Link></li>
           )}
-          <li><button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ecf0f1', padding: '15px 20px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>Logout</button></li>
+          <li><button onClick={() => { setShowChangePassword(true); setIsOpen(false); }} style={{ background: 'none', border: 'none', color: '#ecf0f1', padding: '15px 20px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>🔒 Change Password</button></li>
+          <li><button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ecf0f1', padding: '15px 20px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>🚪 Logout</button></li>
         </ul>
       </nav>
       {isOpen && <div className="overlay" onClick={() => setIsOpen(false)}></div>}
+      {showChangePassword && (
+        <ChangePassword onClose={() => setShowChangePassword(false)} />
+      )}
     </>
   );
 };

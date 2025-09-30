@@ -28,7 +28,9 @@ const InventoryManagement = () => {
     // Warehouse form
     name: '', type: 'main', address: { city: '', state: '' },
     // Stock movement form
-    product: '', warehouse: '', movementType: 'in', quantity: '', notes: ''
+    product: '', warehouse: '', movementType: 'in', quantity: '', notes: '',
+    // Category form
+    categoryName: '', description: ''
   });
 
   useEffect(() => {
@@ -51,16 +53,17 @@ const InventoryManagement = () => {
             name: formData.name,
             category: formData.category,
             pricing: {
-              cost: parseFloat(formData.pricing.cost),
-              sellingPrice: parseFloat(formData.pricing.sellingPrice)
+              cost: parseFloat(formData.pricing.cost) || 0,
+              sellingPrice: parseFloat(formData.pricing.sellingPrice) || 0
             },
             inventory: {
               stockLevels: {
-                reorderPoint: parseInt(formData.inventory.stockLevels.reorderPoint)
+                reorderPoint: parseInt(formData.inventory.stockLevels.reorderPoint) || 0
               },
               locations: []
             }
           };
+          console.log('Product data being sent:', data);
           break;
         case 'warehouses':
           endpoint = 'http://localhost:5000/api/inventory/warehouses';
@@ -81,6 +84,13 @@ const InventoryManagement = () => {
             notes: formData.notes
           };
           break;
+        case 'categories':
+          endpoint = 'http://localhost:5000/api/inventory/categories';
+          data = {
+            categoryName: formData.categoryName,
+            description: formData.description
+          };
+          break;
       }
       
       await axios.post(endpoint, data, {
@@ -92,7 +102,8 @@ const InventoryManagement = () => {
         sku: '', name: '', category: '', pricing: { cost: '', sellingPrice: '' },
         inventory: { stockLevels: { reorderPoint: '' } },
         name: '', type: 'main', address: { city: '', state: '' },
-        product: '', warehouse: '', movementType: 'in', quantity: '', notes: ''
+        product: '', warehouse: '', movementType: 'in', quantity: '', notes: '',
+        categoryName: '', description: ''
       });
       fetchData();
     } catch (error) {

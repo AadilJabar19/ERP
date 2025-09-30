@@ -41,6 +41,7 @@
   padding: 60px 0 20px;
   z-index: 1000;
   transition: left 0.3s ease;
+  overflow-y: auto;
 }
 
 .navbar-open {

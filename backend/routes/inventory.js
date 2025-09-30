@@ -194,7 +194,11 @@ router.get('/categories', auth, async (req, res) => {
 router.post('/categories', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
     const categoryCode = `CAT-${Date.now()}`;
-    const category = new Category({ ...req.body, categoryCode });
+    const category = new Category({ 
+      name: req.body.categoryName || req.body.name,
+      description: req.body.description,
+      categoryCode 
+    });
     await category.save();
     res.status(201).json(category);
   } catch (error) {
@@ -211,14 +215,15 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
       { $group: { _id: null, total: { $sum: { $multiply: ['$totalQuantity', '$pricing.cost'] } } } }
     ]);
     
-    const lowStockProducts = await Product.find({
-      status: 'active',
-      $expr: { $lte: ['$totalQuantity', '$inventory.stockLevels.reorderPoint'] }
-    }).countDocuments();
-    
     const outOfStockProducts = await Product.countDocuments({
       status: 'active',
       totalQuantity: 0
+    });
+    
+    const lowStockProducts = await Product.countDocuments({
+      status: 'active',
+      totalQuantity: { $gt: 0 },
+      $expr: { $lte: ['$totalQuantity', '$inventory.stockLevels.reorderPoint'] }
     });
     
     const inStockProducts = totalProducts - lowStockProducts - outOfStockProducts;
@@ -262,20 +267,21 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
 // Stock Alerts
 router.get('/alerts', auth, async (req, res) => {
   try {
-    const lowStockProducts = await Product.find({
+    const lowStock = await Product.find({
       status: 'active',
       $expr: { $lte: ['$totalQuantity', '$inventory.stockLevels.reorderPoint'] }
     }).populate('category', 'name');
     
+    const EXPIRY_WARNING_DAYS = 30;
+    const expiryThreshold = new Date(Date.now() + EXPIRY_WARNING_DAYS * 24 * 60 * 60 * 1000);
+    
     const expiringSoon = await Product.find({
-      'inventory.batchTracking.batches.expiryDate': { 
-        $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-      }
+      'inventory.batchTracking.batches.expiryDate': { $lte: expiryThreshold }
     }).populate('category', 'name');
     
     res.json({
-      lowStock: lowStockProducts,
-      expiringSoon: expiringSoon
+      lowStock,
+      expiringSoon
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
