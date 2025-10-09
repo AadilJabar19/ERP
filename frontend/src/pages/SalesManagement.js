@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const SalesManagement = () => {
@@ -12,6 +13,8 @@ const SalesManagement = () => {
   const [leads, setLeads] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [sales, setSales] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [analytics, setAnalytics] = useState({});
@@ -19,38 +22,57 @@ const SalesManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, total: 0 });
   const [formData, setFormData] = useState({
-    // Lead form
     contact: { firstName: '', lastName: '', email: '', phone: '', company: '' },
     source: 'website', priority: 'medium', opportunity: { value: '', expectedCloseDate: '' },
-    // Quote form
-    customer: '', items: [{ product: '', quantity: '', unitPrice: '' }],
-    // Sale form
-    saleId: '', customer: { name: '', email: '', phone: '' }, items: [{ product: '', quantity: '', price: '' }], totalAmount: ''
+    customer: '', items: [{ product: '', quantity: '', unitPrice: '', taxRate: '' }],
+    deliveryDate: '', taxRate: '', notes: '', salesOrder: '', dueDate: '', paymentTerms: '',
+    saleId: '', totalAmount: ''
   });
 
   useEffect(() => {
+    setPagination({ currentPage: 1, totalPages: 1, total: 0 });
     fetchData();
   }, [activeTab]);
+  
+  const handlePageChange = (page) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+    setTimeout(fetchData, 0);
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
+      const page = pagination.currentPage;
       
       switch (activeTab) {
         case 'leads':
-          const leadsRes = await axios.get('http://localhost:5000/api/sales/leads', { headers });
-          setLeads(leadsRes.data);
+          const leadsRes = await axios.get(`http://localhost:5000/api/sales/leads?page=${page}&limit=10`, { headers });
+          setLeads(leadsRes.data.leads || leadsRes.data);
+          setPagination({ currentPage: leadsRes.data.currentPage || 1, totalPages: leadsRes.data.totalPages || 1, total: leadsRes.data.total || 0 });
           break;
         case 'quotes':
-          const quotesRes = await axios.get('http://localhost:5000/api/sales/quotes', { headers });
-          setQuotes(quotesRes.data);
+          const quotesRes = await axios.get(`http://localhost:5000/api/sales/quotes?page=${page}&limit=10`, { headers });
+          setQuotes(quotesRes.data.quotes || quotesRes.data);
+          setPagination({ currentPage: quotesRes.data.currentPage || 1, totalPages: quotesRes.data.totalPages || 1, total: quotesRes.data.total || 0 });
           break;
         case 'orders':
-          const salesRes = await axios.get('http://localhost:5000/api/sales', { headers });
+          const ordersRes = await axios.get(`http://localhost:5000/api/sales/orders?page=${page}&limit=10`, { headers });
+          setOrders(ordersRes.data.orders || ordersRes.data);
+          setPagination({ currentPage: ordersRes.data.currentPage || 1, totalPages: ordersRes.data.totalPages || 1, total: ordersRes.data.total || 0 });
+          break;
+        case 'invoices':
+          const invoicesRes = await axios.get(`http://localhost:5000/api/sales/invoices?page=${page}&limit=10`, { headers });
+          setInvoices(invoicesRes.data.invoices || invoicesRes.data);
+          setPagination({ currentPage: invoicesRes.data.currentPage || 1, totalPages: invoicesRes.data.totalPages || 1, total: invoicesRes.data.total || 0 });
+          break;
+        case 'sales':
+          const salesRes = await axios.get(`http://localhost:5000/api/sales?page=${page}&limit=10`, { headers });
           setSales(salesRes.data.sales || salesRes.data);
+          setPagination({ currentPage: salesRes.data.currentPage || 1, totalPages: salesRes.data.totalPages || 1, total: salesRes.data.total || 0 });
           break;
         case 'pipeline':
           const pipelineRes = await axios.get('http://localhost:5000/api/sales/pipeline', { headers });
@@ -62,7 +84,6 @@ const SalesManagement = () => {
           break;
       }
       
-      // Always fetch customers and products for forms
       if (customers.length === 0) {
         const custRes = await axios.get('http://localhost:5000/api/customers', { headers });
         setCustomers(custRes.data.customers || custRes.data);
@@ -97,7 +118,6 @@ const SalesManagement = () => {
               expectedCloseDate: formData.opportunity.expectedCloseDate
             }
           };
-          console.log('Sending lead data:', data);
           break;
         case 'quotes':
           endpoint = 'http://localhost:5000/api/sales/quotes';
@@ -116,11 +136,49 @@ const SalesManagement = () => {
               totalAmount: subtotal
             }
           };
-          console.log('Sending quote data:', data);
           break;
         case 'orders':
-          endpoint = 'http://localhost:5000/api/sales';
-          data = formData;
+          endpoint = 'http://localhost:5000/api/sales/orders';
+          const orderSubtotal = formData.items.reduce((sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unitPrice || 0)), 0);
+          data = {
+            customer: formData.customer,
+            deliveryDate: formData.deliveryDate,
+            items: formData.items.filter(item => item.product && item.quantity && item.unitPrice).map(item => ({
+              product: item.product,
+              quantity: parseFloat(item.quantity),
+              unitPrice: parseFloat(item.unitPrice),
+              total: parseFloat(item.quantity) * parseFloat(item.unitPrice)
+            })),
+            subtotal: orderSubtotal,
+            taxRate: parseFloat(formData.taxRate || 0),
+            taxAmount: orderSubtotal * (parseFloat(formData.taxRate || 0) / 100),
+            totalAmount: orderSubtotal + (orderSubtotal * (parseFloat(formData.taxRate || 0) / 100)),
+            notes: formData.notes
+          };
+          break;
+        case 'invoices':
+          endpoint = 'http://localhost:5000/api/sales/invoices';
+          const invoiceSubtotal = formData.items.reduce((sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unitPrice || 0)), 0);
+          const totalTax = formData.items.reduce((sum, item) => sum + ((parseFloat(item.quantity || 0) * parseFloat(item.unitPrice || 0)) * (parseFloat(item.taxRate || 0) / 100)), 0);
+          data = {
+            customer: formData.customer,
+            salesOrder: formData.salesOrder,
+            dueDate: formData.dueDate,
+            items: formData.items.filter(item => item.product && item.quantity && item.unitPrice).map(item => ({
+              product: item.product,
+              description: products.find(p => p._id === item.product)?.name || '',
+              quantity: parseFloat(item.quantity),
+              unitPrice: parseFloat(item.unitPrice),
+              taxRate: parseFloat(item.taxRate || 0),
+              taxAmount: (parseFloat(item.quantity) * parseFloat(item.unitPrice)) * (parseFloat(item.taxRate || 0) / 100),
+              total: (parseFloat(item.quantity) * parseFloat(item.unitPrice)) + ((parseFloat(item.quantity) * parseFloat(item.unitPrice)) * (parseFloat(item.taxRate || 0) / 100))
+            })),
+            subtotal: invoiceSubtotal,
+            totalTax: totalTax,
+            totalAmount: invoiceSubtotal + totalTax,
+            paymentTerms: formData.paymentTerms,
+            notes: formData.notes
+          };
           break;
       }
       
@@ -141,23 +199,17 @@ const SalesManagement = () => {
     setFormData({
       contact: { firstName: '', lastName: '', email: '', phone: '', company: '' },
       source: 'website', priority: 'medium', opportunity: { value: '', expectedCloseDate: '' },
-      customer: '', items: [{ product: '', quantity: '', unitPrice: '' }],
-      saleId: '', customer: { name: '', email: '', phone: '' }, items: [{ product: '', quantity: '', price: '' }], totalAmount: ''
+      customer: '', items: [{ product: '', quantity: '', unitPrice: '', taxRate: '' }],
+      deliveryDate: '', taxRate: '', notes: '', salesOrder: '', dueDate: '', paymentTerms: '',
+      saleId: '', totalAmount: ''
     });
   };
 
   const addItem = () => {
-    if (activeTab === 'quotes') {
-      setFormData({
-        ...formData,
-        items: [...formData.items, { product: '', quantity: '', unitPrice: '' }]
-      });
-    } else {
-      setFormData({
-        ...formData,
-        items: [...formData.items, { product: '', quantity: '', price: '' }]
-      });
-    }
+    setFormData({
+      ...formData,
+      items: [...formData.items, { product: '', quantity: '', unitPrice: '', taxRate: '' }]
+    });
   };
 
   const updateItem = (index, field, value) => {
@@ -197,9 +249,7 @@ const SalesManagement = () => {
                 <th>Company</th>
                 <th>Source</th>
                 <th>Value</th>
-                <th>Probability</th>
                 <th>Status</th>
-                <th>Assigned To</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -212,16 +262,8 @@ const SalesManagement = () => {
                   <td>{lead.leadNumber}</td>
                   <td>{lead.contact?.firstName} {lead.contact?.lastName}</td>
                   <td>{lead.contact?.company}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: '#6f42c1', color: 'white'
-                    }}>
-                      {lead.source}
-                    </span>
-                  </td>
+                  <td>{lead.source}</td>
                   <td>${lead.opportunity?.value?.toLocaleString() || '0'}</td>
-                  <td>{lead.opportunity?.probability || 0}%</td>
                   <td>
                     <span style={{
                       padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
@@ -230,7 +272,6 @@ const SalesManagement = () => {
                       {lead.status}
                     </span>
                   </td>
-                  <td>{lead.assignedTo?.personalInfo?.firstName} {lead.assignedTo?.personalInfo?.lastName}</td>
                   <td>
                     <button className="btn btn-sm btn-primary">View</button>
                   </td>
@@ -240,6 +281,11 @@ const SalesManagement = () => {
           </table>
         </div>
       )}
+      <Pagination 
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 
@@ -247,11 +293,9 @@ const SalesManagement = () => {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>Quote Management</h3>
-        {hasRole(['admin', 'manager']) && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            Create Quote
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          Create Quote
+        </button>
       </div>
       
       {loading ? <LoadingSpinner /> : (
@@ -262,10 +306,8 @@ const SalesManagement = () => {
                 <th>Quote #</th>
                 <th>Customer</th>
                 <th>Issue Date</th>
-                <th>Valid Until</th>
                 <th>Amount</th>
                 <th>Status</th>
-                <th>Sales Rep</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -275,7 +317,6 @@ const SalesManagement = () => {
                   <td>{quote.quoteNumber}</td>
                   <td>{quote.customer?.companyName}</td>
                   <td>{new Date(quote.issueDate).toLocaleDateString()}</td>
-                  <td>{new Date(quote.validUntil).toLocaleDateString()}</td>
                   <td>${quote.pricing?.totalAmount?.toLocaleString() || '0'}</td>
                   <td>
                     <span style={{
@@ -285,7 +326,6 @@ const SalesManagement = () => {
                       {quote.status}
                     </span>
                   </td>
-                  <td>{quote.salesRep?.personalInfo?.firstName} {quote.salesRep?.personalInfo?.lastName}</td>
                   <td>
                     <button className="btn btn-sm btn-primary">View</button>
                   </td>
@@ -295,6 +335,11 @@ const SalesManagement = () => {
           </table>
         </div>
       )}
+      <Pagination 
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 
@@ -312,29 +357,27 @@ const SalesManagement = () => {
           <table className="table">
             <thead>
               <tr>
-                <th>Sale ID</th>
+                <th>Order #</th>
                 <th>Customer</th>
-                <th>Date</th>
-                <th>Items</th>
+                <th>Order Date</th>
                 <th>Total Amount</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {sales.map(sale => (
-                <tr key={sale._id}>
-                  <td>{sale.saleId}</td>
-                  <td>{sale.customer?.name || sale.customer?.companyName}</td>
-                  <td>{new Date(sale.saleDate).toLocaleDateString()}</td>
-                  <td>{sale.items?.length || 0}</td>
-                  <td>${sale.totalAmount?.toLocaleString() || '0'}</td>
+              {orders.map(order => (
+                <tr key={order._id}>
+                  <td>{order.orderNumber}</td>
+                  <td>{order.customer?.companyName}</td>
+                  <td>{new Date(order.orderDate).toLocaleDateString()}</td>
+                  <td>${order.totalAmount?.toLocaleString() || '0'}</td>
                   <td>
                     <span style={{
                       padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: getStatusColor(sale.status), color: 'white'
+                      backgroundColor: getStatusColor(order.status), color: 'white'
                     }}>
-                      {sale.status}
+                      {order.status}
                     </span>
                   </td>
                   <td>
@@ -346,91 +389,81 @@ const SalesManagement = () => {
           </table>
         </div>
       )}
+      <Pagination 
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 
-  const renderPipeline = () => {
-    const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
-    
-    return (
-      <div>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
-          📈 Sales Pipeline
-        </h3>
-        
-        <div className="grid-stats" style={{ marginBottom: '30px' }}>
-          {pipeline.map((stage, index) => (
-            <div key={stage._id} className="card" style={{ 
-              margin: 0, 
-              background: `linear-gradient(135deg, ${COLORS[index % COLORS.length]}22, ${COLORS[index % COLORS.length]}44)`,
-              border: `2px solid ${COLORS[index % COLORS.length]}`,
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '2rem', opacity: 0.3 }}>
-                {index === 0 ? '🎯' : index === 1 ? '📞' : index === 2 ? '📄' : index === 3 ? '🤝' : '🎆'}
-              </div>
-              <h4 style={{ color: COLORS[index % COLORS.length], margin: '0 0 10px 0' }}>{stage._id}</h4>
-              <p style={{ fontSize: '2rem', color: COLORS[index % COLORS.length], margin: '5px 0' }}>{stage.count}</p>
-              <small style={{ color: '#666' }}>${(stage.totalValue || 0).toLocaleString()}</small>
-            </div>
-          ))}
-        </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-          <div className="card">
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              📊 Pipeline Funnel
-            </h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={pipeline}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="_id" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" fill="#3498db" name="Leads" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          
-          <div className="card">
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              💰 Pipeline Value
-            </h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={pipeline}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="_id" />
-                <YAxis />
-                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Value']} />
-                <Legend />
-                <Line type="monotone" dataKey="totalValue" stroke="#e74c3c" strokeWidth={3} name="Total Value" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+  const renderInvoices = () => (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3>Tax Invoices</h3>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          Create Invoice
+        </button>
       </div>
-    );
-  };
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Invoice Date</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.map(invoice => (
+                <tr key={invoice._id}>
+                  <td>{invoice.invoiceNumber}</td>
+                  <td>{invoice.customer?.companyName}</td>
+                  <td>{new Date(invoice.invoiceDate).toLocaleDateString()}</td>
+                  <td>${invoice.totalAmount?.toLocaleString() || '0'}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: getStatusColor(invoice.status), color: 'white'
+                    }}>
+                      {invoice.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="btn btn-sm btn-primary">View</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Pagination 
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+      />
+    </div>
+  );
 
   const renderAnalytics = () => {
     const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
     
-    const leadStatusData = analytics.leadsByStatus?.map(status => ({
-      name: status._id,
-      count: status.count
+    const leadStatusData = analytics.leadStats?.map(stat => ({
+      name: stat._id,
+      count: stat.count,
+      value: stat.totalValue || 0
     })) || [];
     
-    const quoteStatusData = analytics.quotesByStatus?.map(status => ({
-      name: status._id,
-      count: status.count
-    })) || [];
-    
-    const monthlyData = analytics.monthlySales?.map(month => ({
-      month: month._id,
-      sales: month.totalSales || 0,
-      revenue: month.totalRevenue || 0
+    const salesData = analytics.salesStats?.map(stat => ({
+      name: stat._id,
+      count: stat.count,
+      revenue: stat.totalRevenue || 0
     })) || [];
     
     return (
@@ -442,40 +475,44 @@ const SalesManagement = () => {
         <div className="grid-stats" style={{ marginBottom: '30px' }}>
           <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '2rem' }}>💰</span>
+              <span style={{ fontSize: '2rem' }}>🎯</span>
               <div>
-                <h4 style={{ margin: 0, color: 'white' }}>Total Sales</h4>
-                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.totalSales || 0}</p>
+                <h4 style={{ margin: 0, color: 'white' }}>Total Leads</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.totalLeads || 0}
+                </p>
               </div>
             </div>
           </div>
           <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '2rem' }}>💵</span>
+              <span style={{ fontSize: '2rem' }}>💰</span>
               <div>
                 <h4 style={{ margin: 0, color: 'white' }}>Total Revenue</h4>
-                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>${(analytics.totalRevenue || 0).toLocaleString()}</p>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  ${(analytics.totalRevenue || 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
           <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '2rem' }}>🎯</span>
+              <span style={{ fontSize: '2rem' }}>📄</span>
               <div>
-                <h4 style={{ margin: 0, color: 'white' }}>Active Leads</h4>
+                <h4 style={{ margin: 0, color: 'white' }}>Active Quotes</h4>
                 <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
-                  {analytics.leadsByStatus?.reduce((sum, status) => sum + status.count, 0) || 0}
+                  {analytics.activeQuotes || 0}
                 </p>
               </div>
             </div>
           </div>
           <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '2rem' }}>📄</span>
+              <span style={{ fontSize: '2rem' }}>📋</span>
               <div>
-                <h4 style={{ margin: 0, color: 'white' }}>Pending Quotes</h4>
+                <h4 style={{ margin: 0, color: 'white' }}>Pending Orders</h4>
                 <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
-                  {analytics.quotesByStatus?.find(s => s._id === 'sent')?.count || 0}
+                  {analytics.pendingOrders || 0}
                 </p>
               </div>
             </div>
@@ -485,7 +522,7 @@ const SalesManagement = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
           <div className="card">
             <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              🎯 Lead Status Distribution
+              📊 Lead Status Distribution
             </h4>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -510,48 +547,50 @@ const SalesManagement = () => {
           
           <div className="card">
             <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              📄 Quote Status Distribution
+              💹 Sales Performance
             </h4>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={quoteStatusData}>
+              <BarChart data={salesData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={(value, name) => [name === 'revenue' ? `$${value.toLocaleString()}` : value, name]} />
                 <Legend />
-                <Bar dataKey="count" fill="#2ecc71" name="Quotes" />
+                <Bar dataKey="count" fill="#3498db" name="Count" />
+                <Bar dataKey="revenue" fill="#2ecc71" name="Revenue" />
               </BarChart>
             </ResponsiveContainer>
           </div>
           
           <div className="card">
             <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              📈 Monthly Sales Trend
+              📈 Sales Pipeline
             </h4>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyData}>
+              <BarChart data={pipeline}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
+                <XAxis dataKey="stage" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Pipeline Value']} />
                 <Legend />
-                <Line type="monotone" dataKey="sales" stroke="#3498db" strokeWidth={3} name="Sales Count" />
-              </LineChart>
+                <Bar dataKey="value" fill="#e74c3c" name="Pipeline Value" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
           
           <div className="card">
             <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              💰 Monthly Revenue Trend
+              📅 Monthly Trends
             </h4>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyData}>
+              <LineChart data={analytics.monthlyTrends || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Revenue']} />
+                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
                 <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#e74c3c" strokeWidth={3} name="Revenue" />
+                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={3} name="Revenue" />
+                <Line type="monotone" dataKey="leads" stroke="#82ca9d" strokeWidth={3} name="Leads" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -568,36 +607,31 @@ const SalesManagement = () => {
         <button 
           className={`btn ${activeTab === 'leads' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('leads')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
           🎯 Leads
         </button>
         <button 
           className={`btn ${activeTab === 'quotes' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('quotes')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
           📄 Quotes
         </button>
         <button 
           className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('orders')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          💰 Orders
+          📋 Orders
         </button>
         <button 
-          className={`btn ${activeTab === 'pipeline' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('pipeline')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`btn ${activeTab === 'invoices' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('invoices')}
         >
-          📈 Pipeline
+          🧾 Invoices
         </button>
         {hasRole(['admin', 'manager']) && (
           <button 
             className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('analytics')}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             📊 Analytics
           </button>
@@ -607,13 +641,14 @@ const SalesManagement = () => {
       {activeTab === 'leads' && renderLeads()}
       {activeTab === 'quotes' && renderQuotes()}
       {activeTab === 'orders' && renderOrders()}
-      {activeTab === 'pipeline' && renderPipeline()}
+      {activeTab === 'invoices' && renderInvoices()}
       {activeTab === 'analytics' && renderAnalytics()}
       
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={
         activeTab === 'leads' ? 'Add Lead' :
         activeTab === 'quotes' ? 'Create Quote' :
-        activeTab === 'orders' ? 'Create Order' : 'Form'
+        activeTab === 'orders' ? 'Create Sales Order' :
+        activeTab === 'invoices' ? 'Create Tax Invoice' : 'Form'
       }>
         <form onSubmit={handleSubmit}>
           {activeTab === 'leads' && (
@@ -630,62 +665,20 @@ const SalesManagement = () => {
                     onChange={(e) => setFormData({...formData, contact: {...formData.contact, lastName: e.target.value}})} required />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Email:</label>
-                  <input type="email" value={formData.contact.email} 
-                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, email: e.target.value}})} required />
-                </div>
-                <div className="form-group">
-                  <label>Phone:</label>
-                  <input type="tel" value={formData.contact.phone} 
-                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, phone: e.target.value}})} />
-                </div>
+              <div className="form-group">
+                <label>Email:</label>
+                <input type="email" value={formData.contact.email} 
+                  onChange={(e) => setFormData({...formData, contact: {...formData.contact, email: e.target.value}})} required />
               </div>
               <div className="form-group">
                 <label>Company:</label>
                 <input type="text" value={formData.contact.company} 
                   onChange={(e) => setFormData({...formData, contact: {...formData.contact, company: e.target.value}})} />
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Source:</label>
-                  <select value={formData.source} 
-                    onChange={(e) => setFormData({...formData, source: e.target.value})}>
-                    <option value="website">Website</option>
-                    <option value="referral">Referral</option>
-                    <option value="cold-call">Cold Call</option>
-                    <option value="email">Email</option>
-                    <option value="social-media">Social Media</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Priority:</label>
-                  <select value={formData.priority} 
-                    onChange={(e) => setFormData({...formData, priority: e.target.value})}>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Opportunity Value:</label>
-                  <input type="number" value={formData.opportunity.value} 
-                    onChange={(e) => setFormData({...formData, opportunity: {...formData.opportunity, value: e.target.value}})} />
-                </div>
-                <div className="form-group">
-                  <label>Expected Close Date:</label>
-                  <input type="date" value={formData.opportunity.expectedCloseDate} 
-                    onChange={(e) => setFormData({...formData, opportunity: {...formData.opportunity, expectedCloseDate: e.target.value}})} />
-                </div>
-              </div>
             </>
           )}
           
-          {activeTab === 'quotes' && (
+          {(activeTab === 'quotes' || activeTab === 'orders' || activeTab === 'invoices') && (
             <>
               <div className="form-group">
                 <label>Customer:</label>
@@ -722,43 +715,17 @@ const SalesManagement = () => {
                   </div>
                 </div>
               ))}
-              <button type="button" className="btn btn-secondary" onClick={addItem} style={{ marginBottom: '10px' }}>
+              <button type="button" className="btn btn-secondary" onClick={addItem}>
                 Add Item
               </button>
-            </>
-          )}
-          
-          {activeTab === 'orders' && (
-            <>
-              <div className="form-group">
-                <label>Sale ID:</label>
-                <input type="text" value={formData.saleId} 
-                  onChange={(e) => setFormData({...formData, saleId: e.target.value})} required />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Customer Name:</label>
-                  <input type="text" value={formData.customer.name} 
-                    onChange={(e) => setFormData({...formData, customer: {...formData.customer, name: e.target.value}})} required />
-                </div>
-                <div className="form-group">
-                  <label>Customer Email:</label>
-                  <input type="email" value={formData.customer.email} 
-                    onChange={(e) => setFormData({...formData, customer: {...formData.customer, email: e.target.value}})} />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Total Amount:</label>
-                <input type="number" step="0.01" value={formData.totalAmount} 
-                  onChange={(e) => setFormData({...formData, totalAmount: e.target.value})} required />
-              </div>
             </>
           )}
           
           <button type="submit" className="btn btn-success">
             {activeTab === 'leads' ? 'Add Lead' :
              activeTab === 'quotes' ? 'Create Quote' :
-             activeTab === 'orders' ? 'Create Order' : 'Submit'}
+             activeTab === 'orders' ? 'Create Sales Order' :
+             activeTab === 'invoices' ? 'Create Tax Invoice' : 'Submit'}
           </button>
         </form>
       </Modal>

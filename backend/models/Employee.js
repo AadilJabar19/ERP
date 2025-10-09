@@ -76,7 +76,8 @@ const employeeSchema = new mongoose.Schema({
   },
   status: { type: String, enum: ['active', 'inactive', 'terminated', 'on-leave'], default: 'active' },
   terminationDate: Date,
-  terminationReason: String
+  terminationReason: String,
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
 // Virtual for full name

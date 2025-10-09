@@ -6,7 +6,6 @@ import { setupAxiosInterceptors } from './utils/csrf';
 import NotificationPanel from './components/NotificationPanel';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
-import Employees from './pages/Employees';
 import Inventory from './pages/Inventory';
 import Sales from './pages/Sales';
 import Calendar from './pages/Calendar';
@@ -17,8 +16,11 @@ import CRM from './pages/CRM';
 import HRM from './pages/HRM';
 import InventoryManagement from './pages/InventoryManagement';
 import SalesManagement from './pages/SalesManagement';
+import Admin from './pages/Admin';
+import Finance from './pages/Finance';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
-import './App.css';
+import './App.scss';
 
 function App() {
   useEffect(() => {
@@ -35,7 +37,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/employees" element={<Employees />} />
+
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/calendar" element={<Calendar />} />
@@ -46,6 +48,9 @@ function App() {
               <Route path="/hrm" element={<HRM />} />
               <Route path="/inventory-mgmt" element={<InventoryManagement />} />
               <Route path="/sales-mgmt" element={<SalesManagement />} />
+              <Route path="/finance" element={<Finance />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/admin" element={<Admin />} />
             </Routes>
           </div>
           <NotificationPanel />

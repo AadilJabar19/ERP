@@ -36,10 +36,10 @@ const Attendance = () => {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/employees', {
+      const response = await axios.get('http://localhost:5000/api/hrm/employees', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setEmployees(response.data);
+      setEmployees(response.data.employees || response.data);
     } catch (error) {
       console.error('Error fetching employees:', error);
     }

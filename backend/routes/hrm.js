@@ -3,6 +3,7 @@ const Employee = require('../models/Employee');
 const Leave = require('../models/Leave');
 const Performance = require('../models/Performance');
 const Training = require('../models/Training');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 const roleAuth = require('../middleware/roleAuth');
 const router = express.Router();
@@ -49,6 +50,24 @@ router.post('/employees', auth, roleAuth(['admin', 'manager']), async (req, res)
     res.status(201).json(employee);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+router.put('/employees/:id', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(employee);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete('/employees/:id', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    await Employee.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Employee deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -188,6 +207,65 @@ router.post('/training/:id/enroll', auth, async (req, res) => {
     training.participants.push({ employee: employeeId });
     await training.save();
     res.json(training);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// ERP Users Management
+router.get('/users', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const users = await User.find({ role: { $ne: 'admin' } })
+      .select('name email role isActive createdAt lastLogin')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+      
+    const total = await User.countDocuments({ role: { $ne: 'admin' } });
+    
+    res.json({
+      users,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/users/:id/convert-to-employee', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const { employeeId, department, position, baseSalary } = req.body;
+    
+    const employee = new Employee({
+      employeeId,
+      personalInfo: {
+        firstName: user.name.split(' ')[0],
+        lastName: user.name.split(' ').slice(1).join(' ') || 'N/A'
+      },
+      contactInfo: {
+        email: user.email
+      },
+      employment: {
+        department,
+        position,
+        hireDate: new Date()
+      },
+      compensation: {
+        baseSalary: parseFloat(baseSalary)
+      },
+      userId: user._id
+    });
+    
+    await employee.save();
+    res.status(201).json(employee);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

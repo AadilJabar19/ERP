@@ -1,0 +1,45 @@
+// Button mixin
+@mixin button($bg-color, $text-color: $white) {
+  padding: $spacing-sm $spacing-lg;
+  border: none;
+  border-radius: $border-radius;
+  cursor: pointer;
+  font-size: 14px;
+  margin: $spacing-xs;
+  background: $bg-color;
+  color: $text-color;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+}
+
+// Card mixin
+@mixin card {
+  background: $white;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  margin: $spacing-lg 0;
+  box-shadow: $shadow-light;
+}
+
+// Responsive breakpoints
+@mixin mobile {
+  @media (max-width: #{$mobile}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: #{$mobile + 1px}) and (max-width: #{$tablet}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: #{$tablet + 1px}) {
+    @content;
+  }
+}

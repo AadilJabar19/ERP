@@ -12,10 +12,15 @@ const HRM = () => {
   const [employees, setEmployees] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [trainings, setTrainings] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [editingEmployee, setEditingEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [analytics, setAnalytics] = useState({});
+  const [convertData, setConvertData] = useState({ employeeId: '', department: '', position: '', baseSalary: '' });
   const [formData, setFormData] = useState({
     // Employee form
     employeeId: '', personalInfo: { firstName: '', lastName: '', email: '' },
@@ -35,11 +40,17 @@ const HRM = () => {
     try {
       const token = localStorage.getItem('token');
       let endpoint = '';
+      let method = 'post';
       let data = {};
       
       switch (activeTab) {
         case 'employees':
-          endpoint = 'http://localhost:5000/api/hrm/employees';
+          if (editingEmployee) {
+            endpoint = `http://localhost:5000/api/hrm/employees/${editingEmployee._id}`;
+            method = 'put';
+          } else {
+            endpoint = 'http://localhost:5000/api/hrm/employees';
+          }
           data = {
             employeeId: formData.employeeId,
             personalInfo: {
@@ -58,7 +69,6 @@ const HRM = () => {
               baseSalary: parseFloat(formData.employment.baseSalary)
             }
           };
-          console.log('Sending employee data:', data);
           break;
         case 'leaves':
           endpoint = 'http://localhost:5000/api/hrm/leaves';
@@ -71,11 +81,18 @@ const HRM = () => {
           break;
       }
       
-      await axios.post(endpoint, data, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (method === 'put') {
+        await axios.put(endpoint, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await axios.post(endpoint, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
       
       setShowModal(false);
+      setEditingEmployee(null);
       setFormData({
         employeeId: '', personalInfo: { firstName: '', lastName: '', email: '' },
         contactInfo: { phone: '' }, employment: { department: '', position: '', baseSalary: '' },
@@ -102,6 +119,60 @@ const HRM = () => {
     }
   };
 
+  const handleConvertToEmployee = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/hrm/users/${selectedUser._id}/convert-to-employee`, 
+        convertData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setShowConvertModal(false);
+      setConvertData({ employeeId: '', department: '', position: '', baseSalary: '' });
+      fetchData();
+      alert('User converted to employee successfully!');
+    } catch (error) {
+      console.error('Error converting user:', error);
+      alert('Error: ' + (error.response?.data?.message || 'Failed to convert user'));
+    }
+  };
+
+  const handleEditEmployee = (employee) => {
+    setEditingEmployee(employee);
+    setFormData({
+      employeeId: employee.employeeId,
+      personalInfo: {
+        firstName: employee.personalInfo?.firstName || '',
+        lastName: employee.personalInfo?.lastName || '',
+        email: employee.contactInfo?.email || ''
+      },
+      contactInfo: {
+        phone: employee.contactInfo?.phone || ''
+      },
+      employment: {
+        department: employee.employment?.department || '',
+        position: employee.employment?.position || '',
+        baseSalary: employee.compensation?.baseSalary || ''
+      }
+    });
+    setShowModal(true);
+  };
+
+  const handleDeleteEmployee = async (id) => {
+    if (window.confirm('Are you sure you want to delete this employee?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`http://localhost:5000/api/hrm/employees/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting employee:', error);
+        alert('Error deleting employee');
+      }
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -121,6 +192,10 @@ const HRM = () => {
           const trainRes = await axios.get('http://localhost:5000/api/hrm/training', { headers });
           setTrainings(trainRes.data);
           break;
+        case 'users':
+          const usersRes = await axios.get('http://localhost:5000/api/hrm/users', { headers });
+          setUsers(usersRes.data.users);
+          break;
         case 'analytics':
           const analyticsRes = await axios.get('http://localhost:5000/api/hrm/analytics', { headers });
           setAnalytics(analyticsRes.data);
@@ -137,7 +212,14 @@ const HRM = () => {
     <div className="card">
       <h3>Employee Management</h3>
       {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={() => {
+          setEditingEmployee(null);
+          setFormData({
+            employeeId: '', personalInfo: { firstName: '', lastName: '', email: '' },
+            contactInfo: { phone: '' }, employment: { department: '', position: '', baseSalary: '' }
+          });
+          setShowModal(true);
+        }}>
           Add Employee
         </button>
       )}
@@ -192,7 +274,25 @@ const HRM = () => {
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-primary">View</button>
+                    {hasRole(['admin', 'manager']) && (
+                      <>
+                        <button 
+                          className="btn btn-sm btn-primary" 
+                          style={{ marginRight: '5px' }}
+                          onClick={() => handleEditEmployee(employee)}
+                        >
+                          Edit
+                        </button>
+                        {hasRole(['admin']) && (
+                          <button 
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleDeleteEmployee(employee._id)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -488,6 +588,70 @@ const HRM = () => {
     );
   };
 
+  const renderUsers = () => (
+    <div className="card">
+      <h3>ERP Users</h3>
+      <p style={{ color: '#666', marginBottom: '20px' }}>Manage ERP system users and convert them to employees</p>
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user._id}>
+                  <td>{user.name}</td>
+                  <td>{user.email}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: user.role === 'manager' ? '#17a2b8' : '#6c757d',
+                      color: 'white'
+                    }}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: user.isActive ? '#28a745' : '#dc3545',
+                      color: 'white'
+                    }}>
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</td>
+                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <button 
+                      className="btn btn-sm btn-success"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setShowConvertModal(true);
+                      }}
+                    >
+                      Convert to Employee
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="page-container">
       <h1 className="page-title">Human Resource Management</h1>
@@ -516,6 +680,15 @@ const HRM = () => {
         </button>
         {hasRole(['admin', 'manager']) && (
           <button 
+            className={`btn ${activeTab === 'users' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('users')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            👤 ERP Users
+          </button>
+        )}
+        {hasRole(['admin', 'manager']) && (
+          <button 
             className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('analytics')}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -528,10 +701,11 @@ const HRM = () => {
       {activeTab === 'employees' && renderEmployees()}
       {activeTab === 'leaves' && renderLeaves()}
       {activeTab === 'training' && renderTraining()}
+      {activeTab === 'users' && renderUsers()}
       {activeTab === 'analytics' && renderAnalytics()}
       
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={
-        activeTab === 'employees' ? 'Add Employee' :
+        activeTab === 'employees' ? (editingEmployee ? 'Edit Employee' : 'Add Employee') :
         activeTab === 'leaves' ? 'Apply Leave' :
         activeTab === 'training' ? 'Create Training' : 'Form'
       }>
@@ -669,9 +843,58 @@ const HRM = () => {
           )}
           
           <button type="submit" className="btn btn-success">
-            {activeTab === 'employees' ? 'Add Employee' :
+            {activeTab === 'employees' ? (editingEmployee ? 'Update Employee' : 'Add Employee') :
              activeTab === 'leaves' ? 'Apply Leave' :
              activeTab === 'training' ? 'Create Training' : 'Submit'}
+          </button>
+        </form>
+      </Modal>
+      
+      <Modal isOpen={showConvertModal} onClose={() => setShowConvertModal(false)} title="Convert User to Employee">
+        <form onSubmit={handleConvertToEmployee}>
+          {selectedUser && (
+            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+              <strong>Converting User:</strong> {selectedUser.name} ({selectedUser.email})
+            </div>
+          )}
+          <div className="form-group">
+            <label>Employee ID:</label>
+            <input 
+              type="text" 
+              value={convertData.employeeId} 
+              onChange={(e) => setConvertData({...convertData, employeeId: e.target.value})} 
+              required 
+            />
+          </div>
+          <div className="form-group">
+            <label>Department:</label>
+            <input 
+              type="text" 
+              value={convertData.department} 
+              onChange={(e) => setConvertData({...convertData, department: e.target.value})} 
+              required 
+            />
+          </div>
+          <div className="form-group">
+            <label>Position:</label>
+            <input 
+              type="text" 
+              value={convertData.position} 
+              onChange={(e) => setConvertData({...convertData, position: e.target.value})} 
+              required 
+            />
+          </div>
+          <div className="form-group">
+            <label>Base Salary:</label>
+            <input 
+              type="number" 
+              value={convertData.baseSalary} 
+              onChange={(e) => setConvertData({...convertData, baseSalary: e.target.value})} 
+              required 
+            />
+          </div>
+          <button type="submit" className="btn btn-success">
+            Convert to Employee
           </button>
         </form>
       </Modal>

@@ -59,7 +59,6 @@ console.log('Loading Production ERP routes...');
 // Apply CSRF protection to all routes except auth
 app.use('/api', csrfProtection);
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/employees', require('./routes/employees'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/sales', require('./routes/sales'));
 app.use('/api/attendance', require('./routes/attendance'));
@@ -69,6 +68,8 @@ app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/hrm', require('./routes/hrm'));
+app.use('/api/finance', require('./routes/finance'));
+app.use('/api/admin', require('./routes/admin'));
 try {
   app.use('/api/dashboard', require('./routes/dashboard'));
 } catch (error) {

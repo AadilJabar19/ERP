@@ -60,6 +60,12 @@ export const AuthProvider = ({ children }) => {
     return user && roles.includes(user.role);
   };
 
+  const updateUser = (updatedUserData) => {
+    const newUser = { ...user, ...updatedUserData };
+    setUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
+  };
+
   // Set up axios interceptor for automatic logout on 401
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
@@ -76,7 +82,7 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, hasRole, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, hasRole, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

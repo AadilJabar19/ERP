@@ -2,8 +2,17 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const Activity = require('../models/Activity');
 const { authLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
 const router = express.Router();
+
+const logActivity = async (userId, action, details = '') => {
+  try {
+    await Activity.create({ userId, action, details });
+  } catch (error) {
+    console.error('Failed to log activity:', error);
+  }
+};
 
 // Register
 router.post('/register', async (req, res) => {
@@ -30,6 +39,7 @@ router.post('/register', async (req, res) => {
       role: role || 'employee' 
     });
     await user.save();
+    await logActivity(user._id, 'Account created');
 
     const token = jwt.sign(
       { userId: user._id, role: user.role }, 
@@ -140,7 +150,67 @@ router.post('/change-password', require('../middleware/auth'), async (req, res) 
     user.password = newPassword;
     await user.save();
     
+    await logActivity(req.user._id, 'Password changed');
+    
     res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update Profile
+router.put('/profile', require('../middleware/auth'), async (req, res) => {
+  try {
+    const { name, email, avatar } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Name and email are required' });
+    }
+    
+    const updateData = { name: name.trim(), email: email.toLowerCase() };
+    if (avatar) updateData.avatar = avatar;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true }
+    );
+    
+    await logActivity(req.user._id, 'Profile updated');
+    
+    res.json({ 
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Log Activity
+router.post('/log-activity', require('../middleware/auth'), async (req, res) => {
+  try {
+    const { action } = req.body;
+    await logActivity(req.user._id, action);
+    res.json({ message: 'Activity logged' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get Activities
+router.get('/activities', require('../middleware/auth'), async (req, res) => {
+  try {
+    const activities = await Activity.find({ userId: req.user._id })
+      .sort({ timestamp: -1 })
+      .limit(10);
+    res.json(activities);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -154,7 +224,8 @@ router.get('/verify', require('../middleware/auth'), async (req, res) => {
       name: req.user.name, 
       email: req.user.email, 
       role: req.user.role,
-      lastLogin: req.user.lastLogin
+      lastLogin: req.user.lastLogin,
+      avatar: req.user.avatar
     } 
   });
 });
@@ -195,6 +266,7 @@ router.post('/login', authLimiter, async (req, res) => {
     
     await user.resetLoginAttempts();
     await user.updateLastLogin();
+    await logActivity(user._id, 'Login successful');
 
     const token = jwt.sign(
       { userId: user._id, role: user.role }, 
@@ -209,7 +281,8 @@ router.post('/login', authLimiter, async (req, res) => {
         name: user.name, 
         email: user.email, 
         role: user.role,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        avatar: user.avatar
       } 
     });
   } catch (error) {
