@@ -31,7 +31,7 @@ const Sales = () => {
       const response = await axios.get('http://localhost:5000/api/sales', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSales(response.data);
+      setSales(response.data.sales || []);
     } catch (error) {
       console.error('Error fetching sales:', error);
     }
@@ -40,10 +40,10 @@ const Sales = () => {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/inventory', {
+      const response = await axios.get('http://localhost:5000/api/inventory/products', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setProducts(response.data);
+      setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
     }

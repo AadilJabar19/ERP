@@ -10,7 +10,7 @@ const logActivity = async (userId, action, details = '') => {
   try {
     await Activity.create({ userId, action, details });
   } catch (error) {
-    console.error('Failed to log activity:', error);
+    // Handle error silently
   }
 };
 
@@ -84,8 +84,6 @@ router.post('/forgot-password', passwordResetLimiter, async (req, res) => {
     await user.save();
     
     // In production, send email with reset link
-    console.log(`Password reset token for ${email}: ${resetToken}`);
-    
     res.json({ message: 'Password reset token generated', token: resetToken });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -157,36 +155,76 @@ router.post('/change-password', require('../middleware/auth'), async (req, res) 
     res.status(500).json({ message: 'Server error' });
   }
 });
+// Get Profile
+router.get('/profile', require('../middleware/auth'), async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      phone: user.phone,
+      address: user.address,
+      dateOfBirth: user.dateOfBirth,
+      bio: user.bio,
+      skills: user.skills,
+      interests: user.interests,
+      emergencyContact: user.emergencyContact,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Update Profile
 router.put('/profile', require('../middleware/auth'), async (req, res) => {
   try {
-    const { name, email, avatar } = req.body;
+    const { name, email, phone, address, dateOfBirth, bio, skills, interests, emergencyContact, avatar } = req.body;
     
     if (!name || !email) {
       return res.status(400).json({ message: 'Name and email are required' });
     }
     
-    const updateData = { name: name.trim(), email: email.toLowerCase() };
+    const updateData = { 
+      name: name.trim(), 
+      email: email.toLowerCase(),
+      phone,
+      address,
+      dateOfBirth,
+      bio,
+      skills,
+      interests,
+      emergencyContact
+    };
     if (avatar) updateData.avatar = avatar;
     
     const user = await User.findByIdAndUpdate(
       req.user._id,
       updateData,
       { new: true }
-    );
+    ).select('-password');
     
     await logActivity(req.user._id, 'Profile updated');
     
-    res.json({ 
-      message: 'Profile updated successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar
-      }
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      phone: user.phone,
+      address: user.address,
+      dateOfBirth: user.dateOfBirth,
+      bio: user.bio,
+      skills: user.skills,
+      interests: user.interests,
+      emergencyContact: user.emergencyContact,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -211,6 +249,29 @@ router.get('/activities', require('../middleware/auth'), async (req, res) => {
       .sort({ timestamp: -1 })
       .limit(10);
     res.json(activities);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+// Get Preferences
+router.get('/preferences', require('../middleware/auth'), async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    res.json(user.preferences || {});
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update Preferences
+router.put('/preferences', require('../middleware/auth'), async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { preferences: req.body },
+      { new: true }
+    );
+    res.json(user.preferences);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -286,7 +347,6 @@ router.post('/login', authLimiter, async (req, res) => {
       } 
     });
   } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

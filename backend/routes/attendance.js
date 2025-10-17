@@ -162,4 +162,36 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
   }
 });
 
+// Bulk upload attendance records
+router.post('/bulk', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const { records } = req.body;
+    const results = [];
+    
+    for (const recordData of records) {
+      const employee = await Employee.findOne({ employeeId: recordData.employeeId });
+      if (!employee) continue;
+      
+      const attendance = new Attendance({
+        employee: employee._id,
+        date: new Date(recordData.date),
+        checkIn: recordData.checkIn ? new Date(`${recordData.date}T${recordData.checkIn}`) : null,
+        checkOut: recordData.checkOut ? new Date(`${recordData.date}T${recordData.checkOut}`) : null,
+        location: recordData.location || 'Office'
+      });
+      
+      if (attendance.checkIn && attendance.checkOut) {
+        attendance.workingHours = (attendance.checkOut - attendance.checkIn) / (1000 * 60 * 60);
+      }
+      
+      await attendance.save();
+      results.push(attendance);
+    }
+    
+    res.status(201).json({ message: `Successfully imported ${results.length} attendance records`, records: results });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 module.exports = router;

@@ -34,7 +34,6 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       localStorage.setItem('user', JSON.stringify(response.data.user));
     } catch (error) {
-      console.error('Token verification failed:', error);
       logout();
     } finally {
       setLoading(false);

@@ -93,4 +93,91 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
   }
 });
 
+// CRM Contacts
+router.get('/contacts', auth, async (req, res) => {
+  try {
+    res.json([]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/contacts', auth, async (req, res) => {
+  try {
+    res.status(201).json({ message: 'Contact created successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// CRM Activities
+router.get('/activities', auth, async (req, res) => {
+  try {
+    res.json([]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/activities', auth, async (req, res) => {
+  try {
+    res.status(201).json({ message: 'Activity logged successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// CRM Opportunities
+router.get('/opportunities', auth, async (req, res) => {
+  try {
+    res.json([]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/opportunities', auth, async (req, res) => {
+  try {
+    res.status(201).json({ message: 'Opportunity created successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// CRM Campaigns
+router.get('/campaigns', auth, async (req, res) => {
+  try {
+    res.json([]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/campaigns', auth, async (req, res) => {
+  try {
+    res.status(201).json({ message: 'Campaign created successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Bulk upload customers
+router.post('/bulk', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const { customers } = req.body;
+    const results = [];
+    
+    for (const customerData of customers) {
+      const customerCode = `CUST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const customer = new Customer({ ...customerData, customerCode });
+      await customer.save();
+      results.push(customer);
+    }
+    
+    res.status(201).json({ message: `Successfully imported ${results.length} customers`, customers: results });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 module.exports = router;

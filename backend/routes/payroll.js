@@ -1,12 +1,11 @@
 const express = require('express');
 const Payroll = require('../models/Payroll');
 const Employee = require('../models/Employee');
-const Attendance = require('../models/Attendance');
 const auth = require('../middleware/auth');
 const roleAuth = require('../middleware/roleAuth');
 const router = express.Router();
 
-// Get payroll records
+// Get all payroll records
 router.get('/', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
     const { employee, month, year, status } = req.query;
@@ -21,103 +20,93 @@ router.get('/', auth, roleAuth(['admin', 'manager']), async (req, res) => {
     }
     
     const payrolls = await Payroll.find(query)
-      .populate('employee', 'name employeeId department')
+      .populate('employee', 'personalInfo employeeId employment')
       .sort({ 'payPeriod.startDate': -1 });
       
-    res.json(payrolls);
+    res.json({ payrolls });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Calculate payroll for employee
-router.post('/calculate', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+// Create payroll record
+router.post('/', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
-    const { employeeId, startDate, endDate } = req.body;
+    const { employee, payPeriod, earnings, deductions } = req.body;
     
-    const employee = await Employee.findById(employeeId);
-    if (!employee) {
-      return res.status(404).json({ message: 'Employee not found' });
-    }
-    
-    // Get attendance records for the period
-    const attendanceRecords = await Attendance.find({
-      employee: employeeId,
-      date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-    });
-    
-    const totalHours = attendanceRecords.reduce((sum, record) => sum + (record.workingHours || 0), 0);
-    const standardHours = 160; // 40 hours/week * 4 weeks
-    const overtimeHours = Math.max(0, totalHours - standardHours);
-    const regularHours = Math.min(totalHours, standardHours);
-    
-    const baseSalary = employee.salary;
-    const hourlyRate = baseSalary / standardHours;
-    const overtimeRate = hourlyRate * 1.5;
-    
-    const regularPay = regularHours * hourlyRate;
-    const overtimePay = overtimeHours * overtimeRate;
-    const grossPay = regularPay + overtimePay;
-    
-    // Calculate deductions (simplified)
-    const federalTax = grossPay * 0.12;
-    const stateTax = grossPay * 0.05;
-    const socialSecurity = grossPay * 0.062;
-    const medicare = grossPay * 0.0145;
-    
-    const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
-    const netPay = grossPay - totalDeductions;
+    // Calculate net pay
+    const totalEarnings = (earnings.baseSalary || 0) + (earnings.overtime || 0) + (earnings.bonuses || 0);
+    const netPay = totalEarnings - (deductions || 0);
     
     const payroll = new Payroll({
-      employee: employeeId,
-      payPeriod: { startDate, endDate },
-      baseSalary,
-      hoursWorked: totalHours,
-      overtimeHours,
-      grossPay,
-      totalDeductions,
+      employee,
+      payPeriod,
+      earnings,
+      totalDeductions: deductions || 0,
       netPay,
-      taxCalculations: {
-        federalTax,
-        stateTax,
-        socialSecurity,
-        medicare
-      },
-      status: 'calculated'
+      processedBy: req.user._id,
+      status: 'processed'
     });
     
     await payroll.save();
+    await payroll.populate('employee', 'personalInfo employeeId employment');
+    
     res.status(201).json(payroll);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-// Approve payroll
-router.patch('/:id/approve', auth, roleAuth(['admin']), async (req, res) => {
+// Update payroll status
+router.patch('/:id/status', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
+    const { status } = req.body;
     const payroll = await Payroll.findByIdAndUpdate(
       req.params.id,
-      { status: 'approved' },
+      { status, paidDate: status === 'paid' ? new Date() : undefined },
       { new: true }
-    );
+    ).populate('employee', 'personalInfo employeeId employment');
+    
     res.json(payroll);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-// Process payment
-router.patch('/:id/pay', auth, roleAuth(['admin']), async (req, res) => {
+// Get payroll analytics
+router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
-    const payroll = await Payroll.findByIdAndUpdate(
-      req.params.id,
-      { status: 'paid', payDate: new Date() },
-      { new: true }
-    );
-    res.json(payroll);
+    const [totalPayroll, statusStats, monthlyStats] = await Promise.all([
+      Payroll.aggregate([
+        { $group: { _id: null, total: { $sum: '$netPay' }, count: { $sum: 1 } } }
+      ]),
+      Payroll.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 }, total: { $sum: '$netPay' } } }
+      ]),
+      Payroll.aggregate([
+        {
+          $group: {
+            _id: {
+              year: { $year: '$payPeriod.startDate' },
+              month: { $month: '$payPeriod.startDate' }
+            },
+            total: { $sum: '$netPay' },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { '_id.year': -1, '_id.month': -1 } },
+        { $limit: 12 }
+      ])
+    ]);
+    
+    res.json({
+      totalPayroll: totalPayroll[0]?.total || 0,
+      totalRecords: totalPayroll[0]?.count || 0,
+      statusStats,
+      monthlyStats
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 

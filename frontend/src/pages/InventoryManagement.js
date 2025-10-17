@@ -4,113 +4,59 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import BulkActions from '../components/BulkActions';
+import CSVUpload from '../components/CSVUpload';
+import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const InventoryManagement = () => {
   const { hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState('products');
+  
+  // Bulk actions hooks
+  const productsBulk = useBulkActions();
+  const categoriesBulk = useBulkActions();
+  const warehousesBulk = useBulkActions();
+  const suppliersBulk = useBulkActions();
   const [products, setProducts] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [stockMovements, setStockMovements] = useState([]);
-  const [alerts, setAlerts] = useState({ lowStock: [], expiringSoon: [] });
+  const [suppliers, setSuppliers] = useState([]);
   const [analytics, setAnalytics] = useState({});
+  const [alerts, setAlerts] = useState({ lowStock: [], expiringSoon: [] });
+  const [showCSVModal, setShowCSVModal] = useState(false);
+  const [csvUploadType, setCSVUploadType] = useState('products');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [filterWarehouse, setFilterWarehouse] = useState('');
   const [formData, setFormData] = useState({
     // Product form
-    sku: '', name: '', category: '', pricing: { cost: '', sellingPrice: '' },
-    inventory: { stockLevels: { reorderPoint: '' } },
-    // Warehouse form
-    name: '', type: 'main', address: { city: '', state: '' },
-    // Stock movement form
-    product: '', warehouse: '', movementType: 'in', quantity: '', notes: '',
+    productId: '', name: '', description: '', category: '', sku: '', barcode: '',
+    pricing: { cost: '', sellingPrice: '', currency: 'USD' },
+    inventory: { 
+      stockLevels: { reorderPoint: 10, maxStock: 1000 },
+      trackingMethod: 'fifo'
+    },
+    specifications: { weight: '', dimensions: '', color: '', material: '' },
     // Category form
-    categoryName: '', description: ''
+    categoryName: '', categoryDescription: '',
+    // Warehouse form
+    warehouseName: '', warehouseCode: '', location: '', capacity: { totalSpace: 1000 },
+    // Stock movement form
+    product: '', warehouse: '', movementType: 'in', quantity: 0, reason: '', reference: '',
+    // Supplier form
+    companyName: '', contactPerson: '', email: '', phone: '', address: ''
   });
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, currentPage, searchTerm, filterCategory]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      let endpoint = '';
-      let data = {};
-      
-      switch (activeTab) {
-        case 'products':
-          endpoint = 'http://localhost:5000/api/inventory/products';
-          data = {
-            sku: formData.sku,
-            productId: formData.sku,
-            name: formData.name,
-            category: formData.category,
-            pricing: {
-              cost: parseFloat(formData.pricing.cost) || 0,
-              sellingPrice: parseFloat(formData.pricing.sellingPrice) || 0
-            },
-            inventory: {
-              stockLevels: {
-                reorderPoint: parseInt(formData.inventory.stockLevels.reorderPoint) || 0
-              },
-              locations: []
-            }
-          };
-          console.log('Product data being sent:', data);
-          break;
-        case 'warehouses':
-          endpoint = 'http://localhost:5000/api/inventory/warehouses';
-          data = {
-            name: formData.name,
-            type: formData.type,
-            address: formData.address
-          };
-          break;
-        case 'movements':
-          endpoint = 'http://localhost:5000/api/inventory/stock-movements';
-          data = {
-            product: formData.product,
-            warehouse: formData.warehouse,
-            movementType: formData.movementType,
-            transactionType: formData.movementType === 'in' ? 'purchase' : 'sale',
-            quantity: parseInt(formData.quantity),
-            notes: formData.notes
-          };
-          break;
-        case 'categories':
-          endpoint = 'http://localhost:5000/api/inventory/categories';
-          data = {
-            categoryName: formData.categoryName,
-            description: formData.description
-          };
-          break;
-      }
-      
-      await axios.post(endpoint, data, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setShowModal(false);
-      setFormData({
-        sku: '', name: '', category: '', pricing: { cost: '', sellingPrice: '' },
-        inventory: { stockLevels: { reorderPoint: '' } },
-        name: '', type: 'main', address: { city: '', state: '' },
-        product: '', warehouse: '', movementType: 'in', quantity: '', notes: '',
-        categoryName: '', description: ''
-      });
-      fetchData();
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      alert('Error: ' + (error.response?.data?.message || 'Failed to submit'));
-    }
-  };
+  }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -120,38 +66,33 @@ const InventoryManagement = () => {
       
       switch (activeTab) {
         case 'products':
-          const params = new URLSearchParams({
-            page: currentPage,
-            limit: 10,
-            ...(searchTerm && { search: searchTerm }),
-            ...(filterCategory && { category: filterCategory })
-          });
-          const prodRes = await axios.get(`http://localhost:5000/api/inventory/products?${params}`, { headers });
-          setProducts(prodRes.data.products);
-          setTotalPages(prodRes.data.totalPages);
+          const prodRes = await axios.get('http://localhost:5000/api/inventory/products', { headers });
+          setProducts(prodRes.data.products || []);
+          break;
+        case 'categories':
+          const catRes = await axios.get('http://localhost:5000/api/inventory/categories', { headers });
+          setCategories(catRes.data || []);
           break;
         case 'warehouses':
           const whRes = await axios.get('http://localhost:5000/api/inventory/warehouses', { headers });
-          setWarehouses(whRes.data);
+          setWarehouses(whRes.data || []);
           break;
         case 'movements':
           const movRes = await axios.get('http://localhost:5000/api/inventory/stock-movements', { headers });
-          setStockMovements(movRes.data);
+          setStockMovements(movRes.data || []);
           break;
-        case 'alerts':
-          const alertRes = await axios.get('http://localhost:5000/api/inventory/alerts', { headers });
-          setAlerts(alertRes.data);
+        case 'suppliers':
+          const suppRes = await axios.get('http://localhost:5000/api/suppliers', { headers });
+          setSuppliers(suppRes.data || []);
           break;
         case 'analytics':
           const analyticsRes = await axios.get('http://localhost:5000/api/inventory/analytics', { headers });
           setAnalytics(analyticsRes.data);
           break;
-      }
-      
-      // Always fetch categories for filters
-      if (categories.length === 0) {
-        const catRes = await axios.get('http://localhost:5000/api/inventory/categories', { headers });
-        setCategories(catRes.data);
+        case 'alerts':
+          const alertsRes = await axios.get('http://localhost:5000/api/inventory/alerts', { headers });
+          setAlerts(alertsRes.data);
+          break;
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -160,123 +101,251 @@ const InventoryManagement = () => {
     }
   };
 
-  const getStockStatus = (product) => {
-    const totalQty = product.totalQuantity || 0;
-    const reorderPoint = product.inventory?.stockLevels?.reorderPoint || 0;
-    
-    if (totalQty === 0) return { status: 'Out of Stock', color: '#dc3545' };
-    if (totalQty <= reorderPoint) return { status: 'Low Stock', color: '#ffc107' };
-    return { status: 'In Stock', color: '#28a745' };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      let endpoint = '';
+      let method = 'post';
+      let data = {};
+      
+      switch (activeTab) {
+        case 'products':
+          if (editingItem) {
+            endpoint = `http://localhost:5000/api/inventory/products/${editingItem._id}`;
+            method = 'put';
+          } else {
+            endpoint = 'http://localhost:5000/api/inventory/products';
+          }
+          data = {
+            productId: formData.productId,
+            name: formData.name,
+            description: formData.description,
+            category: formData.category,
+            sku: formData.sku,
+            barcode: formData.barcode,
+            pricing: {
+              cost: parseFloat(formData.pricing.cost),
+              sellingPrice: parseFloat(formData.pricing.sellingPrice),
+              currency: formData.pricing.currency
+            },
+            inventory: formData.inventory,
+            specifications: formData.specifications
+          };
+          break;
+        case 'categories':
+          endpoint = 'http://localhost:5000/api/inventory/categories';
+          data = {
+            name: formData.categoryName,
+            description: formData.categoryDescription
+          };
+          break;
+        case 'warehouses':
+          endpoint = 'http://localhost:5000/api/inventory/warehouses';
+          data = {
+            name: formData.warehouseName,
+            warehouseCode: formData.warehouseCode,
+            location: formData.location,
+            capacity: { totalSpace: parseInt(formData.capacity.totalSpace) }
+          };
+          break;
+        case 'suppliers':
+          endpoint = 'http://localhost:5000/api/suppliers';
+          data = {
+            companyName: formData.companyName,
+            contactPerson: formData.contactPerson,
+            contactInfo: {
+              email: formData.email,
+              phone: formData.phone,
+              address: formData.address
+            }
+          };
+          break;
+      }
+      
+      if (method === 'put') {
+        await axios.put(endpoint, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await axios.post(endpoint, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      
+      setShowModal(false);
+      setEditingItem(null);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Error: ' + (error.response?.data?.message || 'Failed to submit'));
+    }
+  };
+
+  const handleStockMovement = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/inventory/stock-movements', {
+        product: formData.product,
+        warehouse: formData.warehouse,
+        movementType: formData.movementType,
+        quantity: parseInt(formData.quantity),
+        reason: formData.reason,
+        reference: formData.reference
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setShowStockModal(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      console.error('Error recording stock movement:', error);
+      alert('Error: ' + (error.response?.data?.message || 'Failed to record movement'));
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      productId: '', name: '', description: '', category: '', sku: '', barcode: '',
+      pricing: { cost: '', sellingPrice: '', currency: 'USD' },
+      inventory: { 
+        stockLevels: { reorderPoint: 10, maxStock: 1000 },
+        trackingMethod: 'fifo'
+      },
+      specifications: { weight: '', dimensions: '', color: '', material: '' },
+      categoryName: '', categoryDescription: '',
+      warehouseName: '', warehouseCode: '', location: '', capacity: { totalSpace: 1000 },
+      product: '', warehouse: '', movementType: 'in', quantity: 0, reason: '', reference: '',
+      companyName: '', contactPerson: '', email: '', phone: '', address: ''
+    });
+  };
+
+  const handleCSVUpload = async (csvData) => {
+    try {
+      const token = localStorage.getItem('token');
+      let endpoint = '';
+      
+      switch (csvUploadType) {
+        case 'products':
+          endpoint = 'http://localhost:5000/api/inventory/products/bulk';
+          break;
+        case 'categories':
+          endpoint = 'http://localhost:5000/api/inventory/categories/bulk';
+          break;
+        case 'warehouses':
+          endpoint = 'http://localhost:5000/api/inventory/warehouses/bulk';
+          break;
+        case 'suppliers':
+          endpoint = 'http://localhost:5000/api/suppliers/bulk';
+          break;
+      }
+      
+      await axios.post(endpoint, { [csvUploadType]: csvData }, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      alert(`Successfully imported ${csvData.length} ${csvUploadType}`);
+      setShowCSVModal(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error importing data:', error);
+      alert('Error importing data: ' + (error.response?.data?.message || 'Failed to import'));
+    }
+  };
+
+  const getCSVTemplate = () => {
+    switch (csvUploadType) {
+      case 'products':
+        return [{
+          productId: 'PROD001',
+          name: 'Sample Product',
+          sku: 'SKU001',
+          category: 'Electronics',
+          cost: '50.00',
+          sellingPrice: '75.00',
+          reorderPoint: '10',
+          maxStock: '100'
+        }];
+      case 'categories':
+        return [{
+          name: 'Electronics',
+          description: 'Electronic devices and accessories'
+        }];
+      case 'warehouses':
+        return [{
+          name: 'Main Warehouse',
+          warehouseCode: 'WH001',
+          location: 'New York',
+          totalSpace: '1000'
+        }];
+      case 'suppliers':
+        return [{
+          companyName: 'ABC Suppliers',
+          contactPerson: 'John Smith',
+          email: 'john@abcsuppliers.com',
+          phone: '+1234567890',
+          address: '123 Business St, City, State'
+        }];
+      default:
+        return [];
+    }
   };
 
   const renderProducts = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>Product Inventory</h3>
-        {hasRole(['admin', 'manager']) && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            Add Product
-          </button>
-        )}
+        <h3>📦 Product Management</h3>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {hasRole(['admin', 'manager']) && (
+            <>
+              <button className="btn btn-success" onClick={() => setShowStockModal(true)}>
+                📊 Stock Movement
+              </button>
+              <button className="btn btn-primary" onClick={() => {
+                setEditingItem(null);
+                resetForm();
+                setShowModal(true);
+              }}>
+                ➕ Add Product
+              </button>
+            </>
+          )}
+        </div>
       </div>
       
-      <SearchFilter 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filterOptions={categories.map(cat => ({ value: cat._id, label: cat.name }))}
-        selectedFilter={filterCategory}
-        setSelectedFilter={setFilterCategory}
-      />
-      
-      {loading ? <LoadingSpinner /> : (
-        <>
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Product Name</th>
-                  <th>Category</th>
-                  <th>Stock Qty</th>
-                  <th>Available</th>
-                  <th>Reorder Point</th>
-                  <th>Unit Price</th>
-                  <th>Total Value</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(product => {
-                  const stockStatus = getStockStatus(product);
-                  const totalValue = (product.totalQuantity || 0) * (product.pricing?.cost || 0);
-                  
-                  return (
-                    <tr key={product._id}>
-                      <td>{product.sku}</td>
-                      <td>{product.name}</td>
-                      <td>{product.category?.name}</td>
-                      <td>{product.totalQuantity || 0}</td>
-                      <td>{product.availableQuantity || 0}</td>
-                      <td>{product.inventory?.stockLevels?.reorderPoint || 0}</td>
-                      <td>${product.pricing?.sellingPrice?.toFixed(2) || '0.00'}</td>
-                      <td>${totalValue.toFixed(2)}</td>
-                      <td>
-                        <span style={{
-                          padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                          backgroundColor: stockStatus.color, color: 'white'
-                        }}>
-                          {stockStatus.status}
-                        </span>
-                      </td>
-                      <td>
-                        <button className="btn btn-sm btn-primary" style={{ marginRight: '5px' }}>
-                          View
-                        </button>
-                        {hasRole(['admin', 'manager']) && (
-                          <button className="btn btn-sm btn-secondary">
-                            Edit
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </button>
-            <span style={{ padding: '10px' }}>Page {currentPage} of {totalPages}</span>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  const renderWarehouses = () => (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>Warehouse Management</h3>
-        {hasRole(['admin']) && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            Add Warehouse
-          </button>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        {productsBulk.selectedItems.length > 0 && (
+          <BulkActions
+            selectedCount={productsBulk.selectedItems.length}
+            onBulkDelete={() => productsBulk.handleBulkDelete('products', 'http://localhost:5000/api/inventory/products', fetchData)}
+            onClearSelection={productsBulk.clearSelection}
+          />
         )}
+        <button className="btn btn-info" onClick={() => {
+          setCSVUploadType('products');
+          setShowCSVModal(true);
+        }}>
+          📤 Import CSV
+        </button>
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+          <option value="">All Categories</option>
+          {categories.map(cat => (
+            <option key={cat._id} value={cat._id}>{cat.name}</option>
+          ))}
+        </select>
+        <select value={filterWarehouse} onChange={(e) => setFilterWarehouse(e.target.value)}>
+          <option value="">All Warehouses</option>
+          {(warehouses || []).map(wh => (
+            <option key={wh._id} value={wh._id}>{wh.name}</option>
+          ))}
+        </select>
       </div>
       
       {loading ? <LoadingSpinner /> : (
@@ -284,136 +353,73 @@ const InventoryManagement = () => {
           <table className="table">
             <thead>
               <tr>
-                <th>Warehouse Code</th>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={productsBulk.isAllSelected(products)}
+                    onChange={(e) => productsBulk.handleSelectAll(e, products)}
+                  />
+                </th>
+                <th>Product ID</th>
                 <th>Name</th>
-                <th>Type</th>
-                <th>Manager</th>
-                <th>Location</th>
-                <th>Capacity</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>Stock</th>
+                <th>Cost</th>
+                <th>Selling Price</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {warehouses.map(warehouse => (
-                <tr key={warehouse._id}>
-                  <td>{warehouse.warehouseCode}</td>
-                  <td>{warehouse.name}</td>
+              {(products || []).filter(product => 
+                product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.productId?.toLowerCase().includes(searchTerm.toLowerCase())
+              ).map(product => (
+                <tr key={product._id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={productsBulk.selectedItems.includes(product._id)}
+                      onChange={(e) => productsBulk.handleSelectItem(e, product._id)}
+                    />
+                  </td>
+                  <td>{product.productId}</td>
+                  <td>{product.name}</td>
+                  <td>{product.sku}</td>
+                  <td>{product.category?.name}</td>
                   <td>
                     <span style={{
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: '#17a2b8', color: 'white'
+                      color: product.totalQuantity <= product.inventory?.stockLevels?.reorderPoint ? 'red' : 'green',
+                      fontWeight: 'bold'
                     }}>
-                      {warehouse.type}
+                      {product.totalQuantity || 0}
                     </span>
                   </td>
-                  <td>{warehouse.manager?.personalInfo?.firstName} {warehouse.manager?.personalInfo?.lastName}</td>
-                  <td>{warehouse.address?.city}, {warehouse.address?.state}</td>
-                  <td>
-                    {warehouse.capacity?.usedSpace || 0} / {warehouse.capacity?.totalSpace || 0} sq ft
-                  </td>
+                  <td>${product.pricing?.cost?.toFixed(2)}</td>
+                  <td>${product.pricing?.sellingPrice?.toFixed(2)}</td>
                   <td>
                     <span style={{
                       padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: warehouse.status === 'active' ? '#28a745' : '#6c757d',
+                      backgroundColor: product.status === 'active' ? '#28a745' : '#dc3545',
                       color: 'white'
                     }}>
-                      {warehouse.status}
+                      {product.status}
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-primary">Manage</button>
+                    {hasRole(['admin', 'manager']) && (
+                      <>
+                        <button className="btn btn-sm btn-primary" style={{ marginRight: '5px' }}>
+                          Edit
+                        </button>
+                        <button className="btn btn-sm btn-info">
+                          View
+                        </button>
+                      </>
+                    )}
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderAlerts = () => (
-    <div>
-      <h3>Inventory Alerts</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <div className="card">
-          <h4 style={{ color: '#ffc107' }}>Low Stock Items ({alerts.lowStock?.length || 0})</h4>
-          {alerts.lowStock?.slice(0, 5).map(product => (
-            <div key={product._id} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
-              <strong>{product.name}</strong><br />
-              <small>SKU: {product.sku} | Qty: {product.totalQuantity} | Reorder: {product.inventory?.stockLevels?.reorderPoint}</small>
-            </div>
-          ))}
-        </div>
-        
-        <div className="card">
-          <h4 style={{ color: '#dc3545' }}>Expiring Soon ({alerts.expiringSoon?.length || 0})</h4>
-          {alerts.expiringSoon?.slice(0, 5).map(product => (
-            <div key={product._id} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
-              <strong>{product.name}</strong><br />
-              <small>Expires: {new Date(product.inventory?.batchTracking?.batches?.[0]?.expiryDate).toLocaleDateString()}</small>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderMovements = () => (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>Stock Movements</h3>
-        {hasRole(['admin', 'manager']) && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            Record Movement
-          </button>
-        )}
-      </div>
-      
-      {loading ? <LoadingSpinner /> : (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Product</th>
-                <th>Warehouse</th>
-                <th>Type</th>
-                <th>Quantity</th>
-                <th>Reference</th>
-                <th>Status</th>
-                <th>Created By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stockMovements.map(movement => (
-                <tr key={movement._id}>
-                  <td>{new Date(movement.movementDate).toLocaleDateString()}</td>
-                  <td>{movement.product?.name} ({movement.product?.sku})</td>
-                  <td>{movement.warehouse?.name}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: movement.movementType === 'in' ? '#28a745' : 
-                                     movement.movementType === 'out' ? '#dc3545' : '#ffc107',
-                      color: 'white'
-                    }}>
-                      {movement.movementType}
-                    </span>
-                  </td>
-                  <td>{movement.quantity}</td>
-                  <td>{movement.referenceNumber || '-'}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: movement.status === 'completed' ? '#28a745' : '#ffc107',
-                      color: 'white'
-                    }}>
-                      {movement.status}
-                    </span>
-                  </td>
-                  <td>{movement.createdBy?.name}</td>
                 </tr>
               ))}
             </tbody>
@@ -426,12 +432,25 @@ const InventoryManagement = () => {
   const renderCategories = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>Category Management</h3>
-        {hasRole(['admin', 'manager']) && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            Add Category
-          </button>
-        )}
+        <h3>🏷️ Category Management</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {categoriesBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={categoriesBulk.selectedItems.length}
+              onBulkDelete={() => categoriesBulk.handleBulkDelete('categories', 'http://localhost:5000/api/inventory/categories', fetchData)}
+              onClearSelection={categoriesBulk.clearSelection}
+            />
+          )}
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => {
+              setEditingItem(null);
+              resetForm();
+              setShowModal(true);
+            }}>
+              ➕ Add Category
+            </button>
+          )}
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (
@@ -439,30 +458,54 @@ const InventoryManagement = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={categoriesBulk.isAllSelected(categories)}
+                    onChange={(e) => categoriesBulk.handleSelectAll(e, categories)}
+                  />
+                </th>
                 <th>Category Code</th>
                 <th>Name</th>
                 <th>Description</th>
+                <th>Products</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {categories.map(category => (
+              {(categories || []).map(category => (
                 <tr key={category._id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={categoriesBulk.selectedItems.includes(category._id)}
+                      onChange={(e) => categoriesBulk.handleSelectItem(e, category._id)}
+                    />
+                  </td>
                   <td>{category.categoryCode}</td>
                   <td>{category.name}</td>
                   <td>{category.description}</td>
+                  <td>{category.productCount || 0}</td>
                   <td>
                     <span style={{
                       padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: category.status === 'active' ? '#28a745' : '#6c757d',
-                      color: 'white'
+                      backgroundColor: '#28a745', color: 'white'
                     }}>
-                      {category.status}
+                      Active
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-primary">Edit</button>
+                    {hasRole(['admin', 'manager']) && (
+                      <>
+                        <button className="btn btn-sm btn-primary" style={{ marginRight: '5px' }}>
+                          Edit
+                        </button>
+                        <button className="btn btn-sm btn-danger">
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -473,31 +516,286 @@ const InventoryManagement = () => {
     </div>
   );
 
+  const renderWarehouses = () => (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3>🏭 Warehouse Management</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {warehousesBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={warehousesBulk.selectedItems.length}
+              onBulkDelete={() => warehousesBulk.handleBulkDelete('warehouses', 'http://localhost:5000/api/inventory/warehouses', fetchData)}
+              onClearSelection={warehousesBulk.clearSelection}
+            />
+          )}
+          {hasRole(['admin']) && (
+            <button className="btn btn-primary" onClick={() => {
+              setEditingItem(null);
+              resetForm();
+              setShowModal(true);
+            }}>
+              ➕ Add Warehouse
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={warehousesBulk.isAllSelected(warehouses)}
+                    onChange={(e) => warehousesBulk.handleSelectAll(e, warehouses)}
+                  />
+                </th>
+                <th>Warehouse Code</th>
+                <th>Name</th>
+                <th>Location</th>
+                <th>Capacity</th>
+                <th>Manager</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(warehouses || []).map(warehouse => (
+                <tr key={warehouse._id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={warehousesBulk.selectedItems.includes(warehouse._id)}
+                      onChange={(e) => warehousesBulk.handleSelectItem(e, warehouse._id)}
+                    />
+                  </td>
+                  <td>{warehouse.warehouseCode}</td>
+                  <td>{warehouse.name}</td>
+                  <td>{warehouse.location}</td>
+                  <td>{warehouse.capacity?.totalSpace}</td>
+                  <td>{warehouse.manager?.personalInfo?.firstName} {warehouse.manager?.personalInfo?.lastName}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: '#28a745', color: 'white'
+                    }}>
+                      Active
+                    </span>
+                  </td>
+                  <td>
+                    {hasRole(['admin']) && (
+                      <>
+                        <button className="btn btn-sm btn-primary" style={{ marginRight: '5px' }}>
+                          Edit
+                        </button>
+                        <button className="btn btn-sm btn-info">
+                          View
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderMovements = () => (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3>📊 Stock Movements</h3>
+        <button className="btn btn-primary" onClick={() => setShowStockModal(true)}>
+          ➕ Record Movement
+        </button>
+      </div>
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Product</th>
+                <th>Warehouse</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Reason</th>
+                <th>Reference</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(stockMovements || []).map(movement => (
+                <tr key={movement._id}>
+                  <td>{new Date(movement.date).toLocaleDateString()}</td>
+                  <td>{movement.product?.name}</td>
+                  <td>{movement.warehouse?.name}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: movement.movementType === 'in' ? '#28a745' : '#dc3545',
+                      color: 'white'
+                    }}>
+                      {movement.movementType}
+                    </span>
+                  </td>
+                  <td>{movement.quantity}</td>
+                  <td>{movement.reason}</td>
+                  <td>{movement.reference}</td>
+                  <td>
+                    <button className="btn btn-sm btn-info">
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSuppliers = () => (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3>🏢 Supplier Management</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {suppliersBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={suppliersBulk.selectedItems.length}
+              onBulkDelete={() => suppliersBulk.handleBulkDelete('suppliers', 'http://localhost:5000/api/suppliers', fetchData)}
+              onClearSelection={suppliersBulk.clearSelection}
+            />
+          )}
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => {
+              setEditingItem(null);
+              resetForm();
+              setShowModal(true);
+            }}>
+              ➕ Add Supplier
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={suppliersBulk.isAllSelected(suppliers)}
+                    onChange={(e) => suppliersBulk.handleSelectAll(e, suppliers)}
+                  />
+                </th>
+                <th>Company Name</th>
+                <th>Contact Person</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.isArray(suppliers) ? suppliers.map(supplier => (
+                <tr key={supplier._id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={suppliersBulk.selectedItems.includes(supplier._id)}
+                      onChange={(e) => suppliersBulk.handleSelectItem(e, supplier._id)}
+                    />
+                  </td>
+                  <td>{supplier.companyName}</td>
+                  <td>{supplier.contactPerson}</td>
+                  <td>{supplier.contactInfo?.email}</td>
+                  <td>{supplier.contactInfo?.phone}</td>
+                  <td>{supplier.contactInfo?.address}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: '#28a745', color: 'white'
+                    }}>
+                      Active
+                    </span>
+                  </td>
+                  <td>
+                    {hasRole(['admin', 'manager']) && (
+                      <>
+                        <button className="btn btn-sm btn-primary" style={{ marginRight: '5px' }}>
+                          Edit
+                        </button>
+                        <button className="btn btn-sm btn-info">
+                          Orders
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              )) : <tr><td colSpan="7">No suppliers found</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderAlerts = () => (
+    <div className="card">
+      <h3>🚨 Inventory Alerts</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginTop: '20px' }}>
+        <div className="card" style={{ margin: 0, borderLeft: '4px solid #dc3545' }}>
+          <h4 style={{ color: '#dc3545', marginBottom: '15px' }}>⚠️ Low Stock Items</h4>
+          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+            {(alerts.lowStock || []).map(item => (
+              <div key={item._id} style={{ 
+                padding: '10px', marginBottom: '10px', backgroundColor: '#f8f9fa', 
+                borderRadius: '4px', border: '1px solid #dee2e6'
+              }}>
+                <div style={{ fontWeight: 'bold' }}>{item.name}</div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>SKU: {item.sku}</div>
+                <div style={{ fontSize: '0.9rem', color: '#dc3545' }}>Stock: {item.totalQuantity} (Reorder: {item.reorderPoint})</div>
+              </div>
+            )) || <p>No low stock items</p>}
+          </div>
+        </div>
+        
+        <div className="card" style={{ margin: 0, borderLeft: '4px solid #ffc107' }}>
+          <h4 style={{ color: '#ffc107', marginBottom: '15px' }}>📅 Expiring Soon</h4>
+          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+            {(alerts.expiringSoon || []).map(item => (
+              <div key={item._id} style={{ 
+                padding: '10px', marginBottom: '10px', backgroundColor: '#f8f9fa', 
+                borderRadius: '4px', border: '1px solid #dee2e6'
+              }}>
+                <div style={{ fontWeight: 'bold' }}>{item.name}</div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Batch: {item.batchNumber}</div>
+                <div style={{ fontSize: '0.9rem', color: '#ffc107' }}>Expires: {new Date(item.expiryDate).toLocaleDateString()}</div>
+              </div>
+            )) || <p>No items expiring soon</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderAnalytics = () => {
     const COLORS = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#1abc9c'];
-    
-    const categoryData = analytics.categoryStats?.map(cat => ({
-      name: cat._id,
-      products: cat.count,
-      value: cat.totalValue || 0
-    })) || [];
-    
-    const warehouseData = analytics.warehouseStats?.map(wh => ({
-      name: wh._id,
-      products: wh.productCount || 0,
-      capacity: wh.capacity || 0
-    })) || [];
-    
-    const stockData = [
-      { name: 'In Stock', count: analytics.inStockProducts || 0 },
-      { name: 'Low Stock', count: analytics.lowStockProducts || 0 },
-      { name: 'Out of Stock', count: analytics.outOfStockProducts || 0 }
-    ];
     
     return (
       <div>
         <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
-          📦 Inventory Analytics Dashboard
+          📊 Inventory Analytics Dashboard
         </h3>
         
         <div className="grid-stats" style={{ marginBottom: '30px' }}>
@@ -515,7 +813,9 @@ const InventoryManagement = () => {
               <span style={{ fontSize: '2rem' }}>💰</span>
               <div>
                 <h4 style={{ margin: 0, color: 'white' }}>Total Value</h4>
-                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>${(analytics.totalValue || 0).toLocaleString()}</p>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  ${analytics.totalValue?.toLocaleString() || 0}
+                </p>
               </div>
             </div>
           </div>
@@ -523,17 +823,21 @@ const InventoryManagement = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '2rem' }}>⚠️</span>
               <div>
-                <h4 style={{ margin: 0, color: 'white' }}>Low Stock Items</h4>
-                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.lowStockProducts || 0}</p>
+                <h4 style={{ margin: 0, color: 'white' }}>Low Stock</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.lowStockProducts || 0}
+                </p>
               </div>
             </div>
           </div>
           <div className="card" style={{ margin: 0, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '2rem' }}>🏢</span>
+              <span style={{ fontSize: '2rem' }}>✅</span>
               <div>
-                <h4 style={{ margin: 0, color: 'white' }}>Warehouses</h4>
-                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>{analytics.warehouseStats?.length || 0}</p>
+                <h4 style={{ margin: 0, color: 'white' }}>In Stock</h4>
+                <p style={{ fontSize: '2rem', margin: '5px 0', color: 'white' }}>
+                  {analytics.inStockProducts || 0}
+                </p>
               </div>
             </div>
           </div>
@@ -541,76 +845,39 @@ const InventoryManagement = () => {
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
           <div className="card">
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              📊 Products by Category
-            </h4>
+            <h4>📊 Category Distribution</h4>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={categoryData}>
+              <BarChart data={analytics.categoryStats || []}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
+                <XAxis dataKey="_id" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="products" fill="#3498db" name="Products" />
+                <Bar dataKey="count" fill="#3498db" name="Products" />
               </BarChart>
             </ResponsiveContainer>
           </div>
           
           <div className="card">
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              🥧 Stock Status Distribution
-            </h4>
+            <h4>🏭 Warehouse Distribution</h4>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={stockData}
+                  data={analytics.warehouseStats || []}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ _id, productCount }) => `${_id}: ${productCount}`}
                   outerRadius={80}
                   fill="#8884d8"
-                  dataKey="count"
+                  dataKey="productCount"
                 >
-                  {stockData.map((entry, index) => (
+                  {(analytics.warehouseStats || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
-            </ResponsiveContainer>
-          </div>
-          
-          <div className="card">
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              📈 Warehouse Capacity
-            </h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={warehouseData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="products" fill="#2ecc71" name="Products" />
-                <Bar dataKey="capacity" fill="#e74c3c" name="Capacity" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          
-          <div className="card">
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              💰 Category Value Distribution
-            </h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, 'Value']} />
-                <Legend />
-                <Line type="monotone" dataKey="value" stroke="#e74c3c" strokeWidth={3} name="Total Value" />
-              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -626,69 +893,76 @@ const InventoryManagement = () => {
         <button 
           className={`btn ${activeTab === 'products' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('products')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
           📦 Products
         </button>
         <button 
-          className={`btn ${activeTab === 'warehouses' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('warehouses')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          🏢 Warehouses
-        </button>
-        <button 
           className={`btn ${activeTab === 'categories' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('categories')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          📊 Categories
+          🏷️ Categories
+        </button>
+        <button 
+          className={`btn ${activeTab === 'warehouses' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('warehouses')}
+        >
+          🏭 Warehouses
         </button>
         <button 
           className={`btn ${activeTab === 'movements' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('movements')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          🔄 Stock Movements
+          📊 Stock Movements
+        </button>
+        <button 
+          className={`btn ${activeTab === 'suppliers' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('suppliers')}
+        >
+          🏢 Suppliers
+        </button>
+        <button 
+          className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          📊 Analytics
         </button>
         <button 
           className={`btn ${activeTab === 'alerts' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('alerts')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          ⚠️ Alerts
+          🚨 Alerts
         </button>
-        {hasRole(['admin', 'manager']) && (
-          <button 
-            className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setActiveTab('analytics')}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            📊 Analytics
-          </button>
-        )}
       </div>
 
       {activeTab === 'products' && renderProducts()}
-      {activeTab === 'warehouses' && renderWarehouses()}
       {activeTab === 'categories' && renderCategories()}
+      {activeTab === 'warehouses' && renderWarehouses()}
       {activeTab === 'movements' && renderMovements()}
+      {activeTab === 'suppliers' && renderSuppliers()}
       {activeTab === 'alerts' && renderAlerts()}
       {activeTab === 'analytics' && renderAnalytics()}
       
+      {/* Product/Category/Warehouse Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={
-        activeTab === 'products' ? 'Add Product' :
+        activeTab === 'products' ? (editingItem ? 'Edit Product' : 'Add Product') :
         activeTab === 'categories' ? 'Add Category' :
         activeTab === 'warehouses' ? 'Add Warehouse' :
-        activeTab === 'movements' ? 'Stock Movement' : 'Form'
+        activeTab === 'suppliers' ? 'Add Supplier' : 'Form'
       }>
         <form onSubmit={handleSubmit}>
           {activeTab === 'products' && (
             <>
-              <div className="form-group">
-                <label>SKU:</label>
-                <input type="text" value={formData.sku} 
-                  onChange={(e) => setFormData({...formData, sku: e.target.value})} required />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Product ID:</label>
+                  <input type="text" value={formData.productId} 
+                    onChange={(e) => setFormData({...formData, productId: e.target.value})} required />
+                </div>
+                <div className="form-group">
+                  <label>SKU:</label>
+                  <input type="text" value={formData.sku} 
+                    onChange={(e) => setFormData({...formData, sku: e.target.value})} required />
+                </div>
               </div>
               <div className="form-group">
                 <label>Product Name:</label>
@@ -696,14 +970,26 @@ const InventoryManagement = () => {
                   onChange={(e) => setFormData({...formData, name: e.target.value})} required />
               </div>
               <div className="form-group">
-                <label>Category:</label>
-                <select value={formData.category} 
-                  onChange={(e) => setFormData({...formData, category: e.target.value})} required>
-                  <option value="">Select Category</option>
-                  {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                  ))}
-                </select>
+                <label>Description:</label>
+                <textarea value={formData.description} 
+                  onChange={(e) => setFormData({...formData, description: e.target.value})} />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Category:</label>
+                  <select value={formData.category} 
+                    onChange={(e) => setFormData({...formData, category: e.target.value})} required>
+                    <option value="">Select Category</option>
+                    {(categories || []).map(cat => (
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Barcode:</label>
+                  <input type="text" value={formData.barcode} 
+                    onChange={(e) => setFormData({...formData, barcode: e.target.value})} />
+                </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -717,10 +1003,17 @@ const InventoryManagement = () => {
                     onChange={(e) => setFormData({...formData, pricing: {...formData.pricing, sellingPrice: e.target.value}})} required />
                 </div>
               </div>
-              <div className="form-group">
-                <label>Reorder Point:</label>
-                <input type="number" value={formData.inventory.stockLevels.reorderPoint} 
-                  onChange={(e) => setFormData({...formData, inventory: {...formData.inventory, stockLevels: {...formData.inventory.stockLevels, reorderPoint: e.target.value}}})} required />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Reorder Point:</label>
+                  <input type="number" value={formData.inventory.stockLevels.reorderPoint} 
+                    onChange={(e) => setFormData({...formData, inventory: {...formData.inventory, stockLevels: {...formData.inventory.stockLevels, reorderPoint: parseInt(e.target.value)}}})} />
+                </div>
+                <div className="form-group">
+                  <label>Max Stock:</label>
+                  <input type="number" value={formData.inventory.stockLevels.maxStock} 
+                    onChange={(e) => setFormData({...formData, inventory: {...formData.inventory, stockLevels: {...formData.inventory.stockLevels, maxStock: parseInt(e.target.value)}}})} />
+                </div>
               </div>
             </>
           )}
@@ -734,98 +1027,148 @@ const InventoryManagement = () => {
               </div>
               <div className="form-group">
                 <label>Description:</label>
-                <textarea value={formData.description} 
-                  onChange={(e) => setFormData({...formData, description: e.target.value})} />
+                <textarea value={formData.categoryDescription} 
+                  onChange={(e) => setFormData({...formData, categoryDescription: e.target.value})} />
               </div>
             </>
           )}
           
           {activeTab === 'warehouses' && (
             <>
-              <div className="form-group">
-                <label>Warehouse Name:</label>
-                <input type="text" value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} required />
-              </div>
-              <div className="form-group">
-                <label>Type:</label>
-                <select value={formData.type} 
-                  onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                  <option value="main">Main Warehouse</option>
-                  <option value="distribution">Distribution Center</option>
-                  <option value="retail">Retail Store</option>
-                  <option value="transit">Transit Hub</option>
-                </select>
-              </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>City:</label>
-                  <input type="text" value={formData.address.city} 
-                    onChange={(e) => setFormData({...formData, address: {...formData.address, city: e.target.value}})} required />
+                  <label>Warehouse Name:</label>
+                  <input type="text" value={formData.warehouseName} 
+                    onChange={(e) => setFormData({...formData, warehouseName: e.target.value})} required />
                 </div>
                 <div className="form-group">
-                  <label>State:</label>
-                  <input type="text" value={formData.address.state} 
-                    onChange={(e) => setFormData({...formData, address: {...formData.address, state: e.target.value}})} required />
+                  <label>Warehouse Code:</label>
+                  <input type="text" value={formData.warehouseCode} 
+                    onChange={(e) => setFormData({...formData, warehouseCode: e.target.value})} required />
                 </div>
+              </div>
+              <div className="form-group">
+                <label>Location:</label>
+                <input type="text" value={formData.location} 
+                  onChange={(e) => setFormData({...formData, location: e.target.value})} required />
+              </div>
+              <div className="form-group">
+                <label>Total Capacity:</label>
+                <input type="number" value={formData.capacity.totalSpace} 
+                  onChange={(e) => setFormData({...formData, capacity: {totalSpace: parseInt(e.target.value)}})} required />
               </div>
             </>
           )}
           
-          {activeTab === 'movements' && (
+          {activeTab === 'suppliers' && (
             <>
-              <div className="form-group">
-                <label>Product:</label>
-                <select value={formData.product} 
-                  onChange={(e) => setFormData({...formData, product: e.target.value})} required>
-                  <option value="">Select Product</option>
-                  {products.map(prod => (
-                    <option key={prod._id} value={prod._id}>{prod.name} ({prod.sku})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Warehouse:</label>
-                <select value={formData.warehouse} 
-                  onChange={(e) => setFormData({...formData, warehouse: e.target.value})} required>
-                  <option value="">Select Warehouse</option>
-                  {warehouses.map(wh => (
-                    <option key={wh._id} value={wh._id}>{wh.name}</option>
-                  ))}
-                </select>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Company Name:</label>
+                  <input type="text" value={formData.companyName} 
+                    onChange={(e) => setFormData({...formData, companyName: e.target.value})} required />
+                </div>
+                <div className="form-group">
+                  <label>Contact Person:</label>
+                  <input type="text" value={formData.contactPerson} 
+                    onChange={(e) => setFormData({...formData, contactPerson: e.target.value})} required />
+                </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Movement Type:</label>
-                  <select value={formData.movementType} 
-                    onChange={(e) => setFormData({...formData, movementType: e.target.value})}>
-                    <option value="in">Stock In</option>
-                    <option value="out">Stock Out</option>
-                    <option value="adjustment">Adjustment</option>
-                  </select>
+                  <label>Email:</label>
+                  <input type="email" value={formData.email} 
+                    onChange={(e) => setFormData({...formData, email: e.target.value})} required />
                 </div>
                 <div className="form-group">
-                  <label>Quantity:</label>
-                  <input type="number" value={formData.quantity} 
-                    onChange={(e) => setFormData({...formData, quantity: e.target.value})} required />
+                  <label>Phone:</label>
+                  <input type="tel" value={formData.phone} 
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})} />
                 </div>
               </div>
               <div className="form-group">
-                <label>Notes:</label>
-                <textarea value={formData.notes} 
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})} />
+                <label>Address:</label>
+                <textarea value={formData.address} 
+                  onChange={(e) => setFormData({...formData, address: e.target.value})} 
+                  placeholder="Full address..." />
               </div>
             </>
           )}
           
           <button type="submit" className="btn btn-success">
-            {activeTab === 'products' ? 'Add Product' :
-             activeTab === 'categories' ? 'Add Category' :
-             activeTab === 'warehouses' ? 'Add Warehouse' :
-             activeTab === 'movements' ? 'Record Movement' : 'Submit'}
+            {editingItem ? 'Update' : 'Create'}
           </button>
         </form>
       </Modal>
+
+      {/* Stock Movement Modal */}
+      <Modal isOpen={showStockModal} onClose={() => setShowStockModal(false)} title="Record Stock Movement">
+        <form onSubmit={handleStockMovement}>
+          <div className="form-group">
+            <label>Product:</label>
+            <select value={formData.product} 
+              onChange={(e) => setFormData({...formData, product: e.target.value})} required>
+              <option value="">Select Product</option>
+              {(products || []).map(product => (
+                <option key={product._id} value={product._id}>
+                  {product.name} - {product.sku}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Warehouse:</label>
+              <select value={formData.warehouse} 
+                onChange={(e) => setFormData({...formData, warehouse: e.target.value})} required>
+                <option value="">Select Warehouse</option>
+                {(warehouses || []).map(warehouse => (
+                  <option key={warehouse._id} value={warehouse._id}>
+                    {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Movement Type:</label>
+              <select value={formData.movementType} 
+                onChange={(e) => setFormData({...formData, movementType: e.target.value})}>
+                <option value="in">Stock In</option>
+                <option value="out">Stock Out</option>
+                <option value="transfer">Transfer</option>
+                <option value="adjustment">Adjustment</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Quantity:</label>
+            <input type="number" value={formData.quantity} 
+              onChange={(e) => setFormData({...formData, quantity: e.target.value})} required />
+          </div>
+          <div className="form-group">
+            <label>Reason:</label>
+            <input type="text" value={formData.reason} 
+              onChange={(e) => setFormData({...formData, reason: e.target.value})} required />
+          </div>
+          <div className="form-group">
+            <label>Reference:</label>
+            <input type="text" value={formData.reference} 
+              onChange={(e) => setFormData({...formData, reference: e.target.value})} />
+          </div>
+          <button type="submit" className="btn btn-success">
+            Record Movement
+          </button>
+        </form>
+      </Modal>
+      
+      <CSVUpload
+        isOpen={showCSVModal}
+        onClose={() => setShowCSVModal(false)}
+        onUpload={handleCSVUpload}
+        templateData={getCSVTemplate()}
+        title={`Import ${csvUploadType.charAt(0).toUpperCase() + csvUploadType.slice(1)}`}
+        description={`Upload a CSV file to bulk import ${csvUploadType}. Download the template to see the required format.`}
+      />
     </div>
   );
 };

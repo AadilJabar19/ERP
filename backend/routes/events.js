@@ -106,4 +106,31 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
   }
 });
 
+// Bulk upload events
+router.post('/bulk', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const { events } = req.body;
+    const results = [];
+    
+    for (const eventData of events) {
+      const event = new Event({
+        title: eventData.title,
+        description: eventData.description,
+        startDate: `${eventData.startDate}T${eventData.startTime}`,
+        endDate: `${eventData.endDate}T${eventData.endTime}`,
+        type: eventData.type || 'meeting',
+        priority: eventData.priority || 'medium',
+        location: eventData.location,
+        createdBy: req.user._id
+      });
+      await event.save();
+      results.push(event);
+    }
+    
+    res.status(201).json({ message: `Successfully imported ${results.length} events`, events: results });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 module.exports = router;

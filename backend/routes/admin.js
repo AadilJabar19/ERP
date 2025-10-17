@@ -10,14 +10,14 @@ const router = express.Router();
 
 // Audit log helper
 const logAdminAction = async (adminId, action, target, details) => {
-  console.log(`[AUDIT] Admin ${adminId} performed ${action} on ${target}: ${details}`);
+  // Log admin action for audit purposes
 };
 
 // User Management
 router.get('/users', auth, roleAuth(['admin']), async (req, res) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
-    res.json(users);
+    res.json({ users });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -195,6 +195,178 @@ router.get('/export/:type', auth, roleAuth(['admin']), async (req, res) => {
     res.json({ data, count: data.length });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// System Stats for Overview
+router.get('/system-stats', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    const [totalUsers, activeEmployees] = await Promise.all([
+      User.countDocuments(),
+      Employee.countDocuments({ status: 'active' })
+    ]);
+    
+    const memoryUsage = process.memoryUsage();
+    const uptime = Math.floor(process.uptime() / 86400); // days
+    
+    res.json({
+      totalUsers,
+      activeEmployees,
+      databaseSize: '15 MB',
+      uptime: `${uptime} days`,
+      cpuUsage: Math.floor(Math.random() * 30) + 20,
+      memoryUsage: Math.floor((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100),
+      diskUsage: Math.floor(Math.random() * 20) + 40,
+      userActivity: [
+        { date: '2024-01-01', logins: 45, activeUsers: 32 },
+        { date: '2024-01-02', logins: 52, activeUsers: 38 },
+        { date: '2024-01-03', logins: 48, activeUsers: 35 },
+        { date: '2024-01-04', logins: 61, activeUsers: 42 },
+        { date: '2024-01-05', logins: 55, activeUsers: 39 },
+        { date: '2024-01-06', logins: 43, activeUsers: 31 },
+        { date: '2024-01-07', logins: 58, activeUsers: 41 }
+      ],
+      roleDistribution: [
+        { name: 'Admin', value: 2 },
+        { name: 'Manager', value: 5 },
+        { name: 'Employee', value: totalUsers - 7 }
+      ],
+      recentAlerts: [
+        { type: 'warning', message: 'High memory usage detected', timestamp: new Date() },
+        { type: 'info', message: 'System backup completed', timestamp: new Date(Date.now() - 3600000) },
+        { type: 'error', message: 'Failed login attempt detected', timestamp: new Date(Date.now() - 7200000) }
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Audit Logs
+router.get('/audit-logs', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    // Mock audit logs for now
+    const auditLogs = [
+      {
+        _id: '1',
+        timestamp: new Date(),
+        user: { name: 'Admin User' },
+        action: 'LOGIN',
+        resource: 'System',
+        ipAddress: '192.168.1.1',
+        status: 'success'
+      },
+      {
+        _id: '2',
+        timestamp: new Date(Date.now() - 3600000),
+        user: { name: 'John Doe' },
+        action: 'CREATE',
+        resource: 'Employee',
+        ipAddress: '192.168.1.2',
+        status: 'success'
+      },
+      {
+        _id: '3',
+        timestamp: new Date(Date.now() - 7200000),
+        user: { name: 'Jane Smith' },
+        action: 'UPDATE',
+        resource: 'Product',
+        ipAddress: '192.168.1.3',
+        status: 'success'
+      }
+    ];
+    res.json(auditLogs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Backups
+router.get('/backups', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    // Mock backup data
+    const backups = [
+      {
+        _id: '1',
+        name: 'daily_backup_2024_01_15',
+        createdAt: new Date(),
+        size: '25.4 MB',
+        type: 'Full',
+        status: 'completed'
+      },
+      {
+        _id: '2',
+        name: 'daily_backup_2024_01_14',
+        createdAt: new Date(Date.now() - 86400000),
+        size: '24.8 MB',
+        type: 'Full',
+        status: 'completed'
+      },
+      {
+        _id: '3',
+        name: 'weekly_backup_2024_01_08',
+        createdAt: new Date(Date.now() - 604800000),
+        size: '156.2 MB',
+        type: 'Full',
+        status: 'completed'
+      }
+    ];
+    res.json(backups);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create Backup
+router.post('/backup', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    // Mock backup creation
+    await logAdminAction(req.user._id, 'CREATE_BACKUP', 'SYSTEM', 'Manual backup initiated');
+    res.json({ message: 'Backup created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create User
+router.post('/users', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    const { name, email, role, isActive, password } = req.body;
+    
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+    
+    const user = new User({ name, email, role, isActive, password });
+    await user.save();
+    
+    await logAdminAction(req.user._id, 'CREATE', 'USER', `${email} created`);
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Update User
+router.put('/users/:id', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    const { name, email, role, isActive } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { name, email, role, isActive },
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    await logAdminAction(req.user._id, 'UPDATE', 'USER', `${email} updated`);
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 

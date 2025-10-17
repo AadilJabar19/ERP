@@ -24,10 +24,10 @@ const Inventory = () => {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/inventory', {
+      const response = await axios.get('http://localhost:5000/api/inventory/products', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setProducts(response.data);
+      setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -37,7 +37,7 @@ const Inventory = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/inventory', formData, {
+      await axios.post('http://localhost:5000/api/inventory/products', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFormData({
@@ -61,7 +61,7 @@ const Inventory = () => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`/api/inventory/${id}`, {
+        await axios.delete(`http://localhost:5000/api/inventory/products/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         fetchProducts();

@@ -45,6 +45,56 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
   },
+  // Modern Authentication Features
+  mfaEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  mfaSecret: {
+    type: String,
+  },
+  biometricEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  biometricData: {
+    type: String, // Encrypted biometric hash
+  },
+  ssoProvider: {
+    type: String,
+    enum: ['google', 'microsoft', 'azure', null],
+    default: null,
+  },
+  ssoId: {
+    type: String,
+  },
+  phone: { type: String },
+  address: { type: String },
+  dateOfBirth: { type: Date },
+  bio: { type: String },
+  skills: [String],
+  interests: [String],
+  emergencyContact: {
+    name: { type: String },
+    phone: { type: String },
+    relationship: { type: String }
+  },
+  preferences: {
+    theme: { type: String, default: 'light' },
+    language: { type: String, default: 'en' },
+    timezone: { type: String, default: 'UTC' },
+    emailNotifications: { type: Boolean, default: true },
+    pushNotifications: { type: Boolean, default: true },
+    smsNotifications: { type: Boolean, default: false },
+    profileVisible: { type: Boolean, default: true },
+    activityVisible: { type: Boolean, default: true },
+    dataCollection: { type: Boolean, default: true }
+  },
+  securitySettings: {
+    sessionTimeout: { type: Number, default: 24 }, // hours
+    ipWhitelist: [String],
+    deviceTrust: { type: Boolean, default: false }
+  }
 }, {
   timestamps: true,
 });

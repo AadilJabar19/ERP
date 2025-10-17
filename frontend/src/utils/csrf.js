@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 
 let csrfToken = null;
 
-export const getCsrfToken = async () => {
+export const getCSRFToken = async () => {
   if (!csrfToken) {
     try {
-      const response = await axios.get('http://localhost:5000/api/csrf-token', {
+      const response = await axios.get(API_ENDPOINTS.CSRF_TOKEN, {
         withCredentials: true
       });
       csrfToken = response.data.csrfToken;
@@ -18,26 +19,32 @@ export const getCsrfToken = async () => {
 
 export const setupAxiosInterceptors = () => {
   // Request interceptor to add CSRF token
-  axios.interceptors.request.use(async (config) => {
-    if (config.method !== 'get' && !config.url.includes('/api/auth/')) {
-      const token = await getCsrfToken();
-      if (token) {
-        config.headers['X-CSRF-Token'] = token;
+  axios.interceptors.request.use(
+    async (config) => {
+      // Skip CSRF for GET requests and auth endpoints
+      if (config.method !== 'get' && !config.url.includes('/auth/')) {
+        const token = await getCSRFToken();
+        if (token) {
+          config.headers['X-CSRF-Token'] = token;
+        }
       }
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
     }
-    config.withCredentials = true;
-    return config;
-  });
+  );
 
   // Response interceptor to handle CSRF errors
   axios.interceptors.response.use(
     (response) => response,
     async (error) => {
       if (error.response?.status === 403 && error.response?.data?.message?.includes('CSRF')) {
-        csrfToken = null; // Reset token
-        const newToken = await getCsrfToken();
-        if (newToken) {
-          error.config.headers['X-CSRF-Token'] = newToken;
+        // Reset CSRF token and retry
+        csrfToken = null;
+        const token = await getCSRFToken();
+        if (token) {
+          error.config.headers['X-CSRF-Token'] = token;
           return axios.request(error.config);
         }
       }
@@ -45,3 +52,5 @@ export const setupAxiosInterceptors = () => {
     }
   );
 };
+
+export default { getCSRFToken, setupAxiosInterceptors };

@@ -36,7 +36,7 @@ const Projects = () => {
       const response = await axios.get('http://localhost:5000/api/projects', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setProjects(response.data);
+      setProjects(response.data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
@@ -47,12 +47,14 @@ const Projects = () => {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/employees', {
+      const response = await axios.get('http://localhost:5000/api/hrm/employees', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setEmployees(response.data);
+      const employeeData = response.data.employees || response.data.items || response.data || [];
+      setEmployees(Array.isArray(employeeData) ? employeeData : []);
     } catch (error) {
       console.error('Error fetching employees:', error);
+      setEmployees([]);
     }
   };
   
@@ -63,7 +65,7 @@ const Projects = () => {
       const response = await axios.get('http://localhost:5000/api/projects/analytics', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAnalytics(response.data);
+      setAnalytics(response.data || {});
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
@@ -392,8 +394,8 @@ const Projects = () => {
             <select value={formData.manager} 
               onChange={(e) => setFormData({...formData, manager: e.target.value})} required>
               <option value="">Select Manager</option>
-              {employees.map(emp => (
-                <option key={emp._id} value={emp._id}>{emp.name}</option>
+              {(employees || []).map(emp => (
+                <option key={emp._id} value={emp._id}>{emp.name || emp.personalInfo?.firstName + ' ' + emp.personalInfo?.lastName}</option>
               ))}
             </select>
           </div>

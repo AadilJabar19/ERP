@@ -4,6 +4,7 @@ const Leave = require('../models/Leave');
 const Performance = require('../models/Performance');
 const Training = require('../models/Training');
 const User = require('../models/User');
+const Department = require('../models/Department');
 const auth = require('../middleware/auth');
 const roleAuth = require('../middleware/roleAuth');
 const router = express.Router();
@@ -187,7 +188,10 @@ router.get('/training', auth, async (req, res) => {
 
 router.post('/training', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
-    const training = new Training(req.body);
+    const training = new Training({
+      ...req.body,
+      createdBy: req.user._id
+    });
     await training.save();
     res.status(201).json(training);
   } catch (error) {
@@ -271,6 +275,88 @@ router.post('/users/:id/convert-to-employee', auth, roleAuth(['admin', 'manager'
   }
 });
 
+// Department Management Routes
+router.get('/departments', auth, async (req, res) => {
+  try {
+    const departments = await Department.find()
+      .populate('manager', 'personalInfo employeeId')
+      .sort({ name: 1 });
+    
+    // Add employee count for each department
+    const departmentsWithCount = await Promise.all(
+      departments.map(async (dept) => {
+        const employeeCount = await Employee.countDocuments({ 
+          'employment.department': dept.name,
+          status: 'active'
+        });
+        return {
+          ...dept.toObject(),
+          employeeCount
+        };
+      })
+    );
+    
+    res.json(departmentsWithCount);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/departments', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    const { name, manager, budget, description, location } = req.body;
+    const code = `DEPT-${Date.now()}`;
+    
+    const department = new Department({
+      name,
+      code,
+      manager,
+      budget: parseFloat(budget) || 0,
+      description,
+      location
+    });
+    
+    await department.save();
+    res.status(201).json(department);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.put('/departments/:id', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    const department = await Department.findByIdAndUpdate(
+      req.params.id, 
+      req.body, 
+      { new: true }
+    ).populate('manager', 'personalInfo employeeId');
+    res.json(department);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete('/departments/:id', auth, roleAuth(['admin']), async (req, res) => {
+  try {
+    // Check if department has employees
+    const employeeCount = await Employee.countDocuments({ 
+      'employment.department': req.params.id,
+      status: 'active'
+    });
+    
+    if (employeeCount > 0) {
+      return res.status(400).json({ 
+        message: 'Cannot delete department with active employees' 
+      });
+    }
+    
+    await Department.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Department deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // HRM Analytics
 router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) => {
   try {
@@ -307,6 +393,42 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Bulk upload employees
+router.post('/employees/bulk', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const { employees } = req.body;
+    const results = [];
+    
+    for (const empData of employees) {
+      const employee = new Employee({
+        employeeId: empData.employeeId,
+        personalInfo: {
+          firstName: empData.firstName,
+          lastName: empData.lastName
+        },
+        contactInfo: {
+          email: empData.email,
+          phone: empData.phone
+        },
+        employment: {
+          department: empData.department,
+          position: empData.position,
+          hireDate: new Date()
+        },
+        compensation: {
+          baseSalary: parseFloat(empData.baseSalary) || 0
+        }
+      });
+      await employee.save();
+      results.push(employee);
+    }
+    
+    res.status(201).json({ message: `Successfully imported ${results.length} employees`, employees: results });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 

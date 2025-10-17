@@ -46,8 +46,8 @@ const CRM = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setCustomers(response.data.customers);
-      setTotalPages(response.data.totalPages);
+      setCustomers(response.data.customers || []);
+      setTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {

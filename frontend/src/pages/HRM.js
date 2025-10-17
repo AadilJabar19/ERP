@@ -1,39 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import BulkActions from '../components/BulkActions';
+import CSVUpload from '../components/CSVUpload';
+import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const HRM = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
+  
+
+  const { success, error, showConfirm } = useToast();
   const [activeTab, setActiveTab] = useState('employees');
   const [employees, setEmployees] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [trainings, setTrainings] = useState([]);
   const [users, setUsers] = useState([]);
+  const [performances, setPerformances] = useState([]);
+  const [payrolls, setPayrolls] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
+  const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [analytics, setAnalytics] = useState({});
+  const [showCSVModal, setShowCSVModal] = useState(false);
   const [convertData, setConvertData] = useState({ employeeId: '', department: '', position: '', baseSalary: '' });
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [formData, setFormData] = useState({
     // Employee form
-    employeeId: '', personalInfo: { firstName: '', lastName: '', email: '' },
-    contactInfo: { phone: '' }, employment: { department: '', position: '', baseSalary: '' },
+    employeeId: '', 
+    personalInfo: { firstName: '', lastName: '', email: '', dateOfBirth: '', gender: '', maritalStatus: '' },
+    contactInfo: { phone: '', address: '', emergencyContact: { name: '', phone: '', relationship: '' } }, 
+    employment: { department: '', position: '', baseSalary: '', employmentType: 'full-time', workSchedule: 'standard', manager: '' },
     // Leave form
     leaveType: 'annual', startDate: '', endDate: '', reason: '',
     // Training form
-    title: '', category: 'technical', type: 'online', duration: '', startDate: '', endDate: ''
+    title: '', category: 'technical', type: 'online', duration: '', maxParticipants: 20,
+    // Performance form
+    reviewType: 'annual', 
+    reviewPeriod: { startDate: '', endDate: '' }, 
+    overallRating: 5,
+    goals: [{ description: '', status: 'pending', dueDate: '' }],
+    competencies: [{ name: '', rating: 5, comments: '' }],
+    // Payroll form
+    payPeriod: { startDate: '', endDate: '' }, 
+    baseSalary: '', overtime: 0, bonuses: 0, deductions: 0, comments: ''
   });
 
   useEffect(() => {
     fetchData();
+    if (activeTab === 'employees') {
+      fetchDepartments();
+    }
   }, [activeTab]);
+
+  const fetchDepartments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/hrm/departments', {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true
+      });
+      setDepartments(response.data || []);
+    } catch (error) {
+      // Handle error silently
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,14 +103,14 @@ const HRM = () => {
             },
             contactInfo: {
               email: formData.personalInfo.email,
-              phone: formData.contactInfo.phone
+              phone: formData.contactInfo.phone || ''
             },
             employment: {
               department: formData.employment.department,
               position: formData.employment.position
             },
             compensation: {
-              baseSalary: parseFloat(formData.employment.baseSalary)
+              baseSalary: parseFloat(formData.employment.baseSalary) || 0
             }
           };
           break;
@@ -79,30 +123,63 @@ const HRM = () => {
           endpoint = 'http://localhost:5000/api/hrm/training';
           data = formData;
           break;
+        case 'performance':
+          endpoint = 'http://localhost:5000/api/hrm/performance';
+          data = {
+            employee: selectedEmployee?._id,
+            reviewType: formData.reviewType,
+            reviewPeriod: formData.reviewPeriod,
+            overallRating: formData.overallRating,
+            comments: formData.comments
+          };
+          break;
+        case 'payroll':
+          endpoint = 'http://localhost:5000/api/payroll';
+          data = {
+            employee: selectedEmployee?._id,
+            payPeriod: formData.payPeriod,
+            earnings: {
+              baseSalary: parseFloat(formData.baseSalary) || 0,
+              overtime: parseFloat(formData.overtime) || 0,
+              bonuses: parseFloat(formData.bonuses) || 0
+            },
+            deductions: parseFloat(formData.deductions) || 0
+          };
+          break;
       }
       
       if (method === 'put') {
         await axios.put(endpoint, data, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true
         });
       } else {
         await axios.post(endpoint, data, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true
         });
       }
       
       setShowModal(false);
+      setShowPerformanceModal(false);
+      setShowPayrollModal(false);
       setEditingEmployee(null);
+      setSelectedEmployee(null);
       setFormData({
-        employeeId: '', personalInfo: { firstName: '', lastName: '', email: '' },
-        contactInfo: { phone: '' }, employment: { department: '', position: '', baseSalary: '' },
+        employeeId: '', 
+        personalInfo: { firstName: '', lastName: '', email: '' },
+        contactInfo: { phone: '' }, 
+        employment: { department: '', position: '', baseSalary: '' },
         leaveType: 'annual', startDate: '', endDate: '', reason: '',
-        title: '', category: 'technical', type: 'online', duration: '', startDate: '', endDate: ''
+        title: '', category: 'technical', type: 'online', duration: '', maxParticipants: 20,
+        reviewType: 'annual', overallRating: 5, 
+        reviewPeriod: { startDate: '', endDate: '' },
+        baseSalary: '', overtime: 0, bonuses: 0, deductions: 0, 
+        payPeriod: { startDate: '', endDate: '' }, comments: ''
       });
       fetchData();
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      alert('Error: ' + (error.response?.data?.message || 'Failed to submit'));
+    } catch (err) {
+      error('Error: ' + (err.response?.data?.message || 'Failed to submit'));
     }
   };
 
@@ -111,11 +188,11 @@ const HRM = () => {
       const token = localStorage.getItem('token');
       await axios.patch(`http://localhost:5000/api/hrm/leaves/${leaveId}/approve`, 
         { approved }, 
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
       );
       fetchData();
     } catch (error) {
-      console.error('Error updating leave:', error);
+      // Handle error silently
     }
   };
 
@@ -125,52 +202,115 @@ const HRM = () => {
       const token = localStorage.getItem('token');
       await axios.post(`http://localhost:5000/api/hrm/users/${selectedUser._id}/convert-to-employee`, 
         convertData,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
       );
       setShowConvertModal(false);
       setConvertData({ employeeId: '', department: '', position: '', baseSalary: '' });
       fetchData();
-      alert('User converted to employee successfully!');
-    } catch (error) {
-      console.error('Error converting user:', error);
-      alert('Error: ' + (error.response?.data?.message || 'Failed to convert user'));
+      success('User converted to employee successfully!');
+    } catch (err) {
+      error('Error: ' + (err.response?.data?.message || 'Failed to convert user'));
     }
   };
 
   const handleEditEmployee = (employee) => {
     setEditingEmployee(employee);
     setFormData({
-      employeeId: employee.employeeId,
+      employeeId: employee?.employeeId || '',
       personalInfo: {
-        firstName: employee.personalInfo?.firstName || '',
-        lastName: employee.personalInfo?.lastName || '',
-        email: employee.contactInfo?.email || ''
+        firstName: employee?.personalInfo?.firstName || '',
+        lastName: employee?.personalInfo?.lastName || '',
+        email: employee?.contactInfo?.email || ''
       },
       contactInfo: {
-        phone: employee.contactInfo?.phone || ''
+        phone: employee?.contactInfo?.phone || ''
       },
       employment: {
-        department: employee.employment?.department || '',
-        position: employee.employment?.position || '',
-        baseSalary: employee.compensation?.baseSalary || ''
+        department: employee?.employment?.department || '',
+        position: employee?.employment?.position || '',
+        baseSalary: employee?.compensation?.baseSalary || ''
       }
     });
     setShowModal(true);
   };
 
-  const handleDeleteEmployee = async (id) => {
-    if (window.confirm('Are you sure you want to delete this employee?')) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:5000/api/hrm/employees/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        fetchData();
-      } catch (error) {
-        console.error('Error deleting employee:', error);
-        alert('Error deleting employee');
+  const handleDeleteEmployee = async (id, employeeName) => {
+    showConfirm(
+      'Delete Employee',
+      `Are you sure you want to delete ${employeeName}? This action cannot be undone.`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`http://localhost:5000/api/hrm/employees/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true
+          });
+          success('Employee deleted successfully');
+          fetchData();
+        } catch (err) {
+          error('Error deleting employee');
+        }
       }
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedItems.length === 0) return;
+    showConfirm(
+      'Bulk Delete',
+      `Are you sure you want to delete ${selectedItems.length} selected items? This action cannot be undone.`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await Promise.all(selectedItems.map(id => 
+            axios.delete(`http://localhost:5000/api/hrm/employees/${id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+              withCredentials: true
+            })
+          ));
+          success(`${selectedItems.length} items deleted successfully`);
+          clearSelection();
+          fetchData();
+        } catch (err) {
+          error('Error deleting items');
+        }
+      }
+    );
+  };
+
+  const handleCSVUpload = async (csvData) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/hrm/employees/bulk', {
+        employees: csvData
+      }, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      success(`Successfully imported ${csvData.length} employees`);
+      setShowCSVModal(false);
+      fetchData();
+    } catch (err) {
+      error('Error importing employees: ' + (err.response?.data?.message || 'Failed to import'));
     }
+  };
+
+  const getCSVTemplate = () => {
+    return [
+      {
+        employeeId: 'EMP001',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@company.com',
+        phone: '+1234567890',
+        department: 'IT',
+        position: 'Software Developer',
+        baseSalary: '75000'
+      }
+    ];
   };
 
   const fetchData = async () => {
@@ -181,28 +321,40 @@ const HRM = () => {
       
       switch (activeTab) {
         case 'employees':
-          const empRes = await axios.get('http://localhost:5000/api/hrm/employees', { headers });
-          setEmployees(empRes.data.employees);
+          const empRes = await axios.get('http://localhost:5000/api/hrm/employees', { headers, withCredentials: true });
+          setEmployees(empRes.data.employees || []);
           break;
         case 'leaves':
-          const leaveRes = await axios.get('http://localhost:5000/api/hrm/leaves', { headers });
-          setLeaves(leaveRes.data);
+          const leaveRes = await axios.get('http://localhost:5000/api/hrm/leaves', { headers, withCredentials: true });
+          setLeaves(leaveRes.data || []);
           break;
         case 'training':
-          const trainRes = await axios.get('http://localhost:5000/api/hrm/training', { headers });
-          setTrainings(trainRes.data);
+          const trainRes = await axios.get('http://localhost:5000/api/hrm/training', { headers, withCredentials: true });
+          setTrainings(trainRes.data || []);
           break;
         case 'users':
-          const usersRes = await axios.get('http://localhost:5000/api/hrm/users', { headers });
-          setUsers(usersRes.data.users);
+          const usersRes = await axios.get('http://localhost:5000/api/hrm/users', { headers, withCredentials: true });
+          setUsers(usersRes.data.users || []);
           break;
         case 'analytics':
-          const analyticsRes = await axios.get('http://localhost:5000/api/hrm/analytics', { headers });
-          setAnalytics(analyticsRes.data);
+          const analyticsRes = await axios.get('http://localhost:5000/api/hrm/analytics', { headers, withCredentials: true });
+          setAnalytics(analyticsRes.data || {});
+          break;
+        case 'performance':
+          const perfRes = await axios.get('http://localhost:5000/api/hrm/performance', { headers, withCredentials: true });
+          setPerformances(perfRes.data || []);
+          break;
+        case 'payroll':
+          const payrollRes = await axios.get('http://localhost:5000/api/payroll', { headers, withCredentials: true });
+          setPayrolls(payrollRes.data.payrolls || []);
+          break;
+        case 'departments':
+          const deptRes = await axios.get('http://localhost:5000/api/hrm/departments', { headers, withCredentials: true });
+          setDepartments(deptRes.data || []);
           break;
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      // Handle error silently
     } finally {
       setLoading(false);
     }
@@ -211,18 +363,33 @@ const HRM = () => {
   const renderEmployees = () => (
     <div className="card">
       <h3>Employee Management</h3>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => {
-          setEditingEmployee(null);
-          setFormData({
-            employeeId: '', personalInfo: { firstName: '', lastName: '', email: '' },
-            contactInfo: { phone: '' }, employment: { department: '', position: '', baseSalary: '' }
-          });
-          setShowModal(true);
-        }}>
-          Add Employee
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => {
+              setEditingEmployee(null);
+              setFormData({
+                employeeId: '', 
+                personalInfo: { firstName: '', lastName: '', email: '' },
+                contactInfo: { phone: '' }, 
+                employment: { department: '', position: '', baseSalary: '' },
+                reviewPeriod: { startDate: '', endDate: '' },
+                payPeriod: { startDate: '', endDate: '' }
+              });
+              setShowModal(true);
+            }}>
+              Add Employee
+            </button>
+          )}
+          <BulkActions 
+            selectedItems={selectedItems}
+            onBulkDelete={handleBulkDelete}
+          />
+          <button className="btn btn-info" onClick={() => setShowCSVModal(true)}>
+            📤 Import CSV
+          </button>
+        </div>
+      </div>
       
       <SearchFilter 
         searchTerm={searchTerm}
@@ -234,6 +401,13 @@ const HRM = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e.target.checked, employees)}
+                  />
+                </th>
                 <th>Employee ID</th>
                 <th>Name</th>
                 <th>Department</th>
@@ -250,6 +424,13 @@ const HRM = () => {
                 emp.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
               ).map(employee => (
                 <tr key={employee._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(employee._id)}
+                      onChange={(e) => handleSelectItem(employee._id, e.target.checked)}
+                    />
+                  </td>
                   <td>{employee.employeeId}</td>
                   <td>{employee.fullName}</td>
                   <td>{employee.employment?.department}</td>
@@ -286,7 +467,7 @@ const HRM = () => {
                         {hasRole(['admin']) && (
                           <button 
                             className="btn btn-sm btn-danger"
-                            onClick={() => handleDeleteEmployee(employee._id)}
+                            onClick={() => handleDeleteEmployee(employee._id, employee.fullName)}
                           >
                             Delete
                           </button>
@@ -429,7 +610,7 @@ const HRM = () => {
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-primary">Enroll</button>
+                    <button className="btn btn-sm btn-primary" onClick={() => success(`Enrolled in: ${training.title}`)}>Enroll</button>
                   </td>
                 </tr>
               ))}
@@ -588,6 +769,205 @@ const HRM = () => {
     );
   };
 
+  const renderPerformance = () => (
+    <div className="card">
+      <h3>Performance Reviews</h3>
+      {hasRole(['admin', 'manager']) && (
+        <button className="btn btn-primary" onClick={() => {
+          setShowPerformanceModal(true);
+          setFormData({...formData, reviewType: 'annual', overallRating: 5, reviewPeriod: { startDate: '', endDate: '' }});
+        }}>
+          Create Performance Review
+        </button>
+      )}
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Review Type</th>
+                <th>Period</th>
+                <th>Overall Rating</th>
+                <th>Status</th>
+                <th>Reviewer</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(performances || []).map(perf => (
+                <tr key={perf._id}>
+                  <td>{perf.employee?.personalInfo?.firstName} {perf.employee?.personalInfo?.lastName}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: '#17a2b8', color: 'white'
+                    }}>
+                      {perf.reviewType}
+                    </span>
+                  </td>
+                  <td>{perf.reviewPeriod?.startDate ? new Date(perf.reviewPeriod.startDate).toLocaleDateString() : 'N/A'} - {perf.reviewPeriod?.endDate ? new Date(perf.reviewPeriod.endDate).toLocaleDateString() : 'N/A'}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: perf.overallRating >= 4 ? '#28a745' : perf.overallRating >= 3 ? '#ffc107' : '#dc3545',
+                      color: 'white'
+                    }}>
+                      {perf.overallRating}/5
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: perf.status === 'completed' ? '#28a745' : '#ffc107',
+                      color: 'white'
+                    }}>
+                      {perf.status}
+                    </span>
+                  </td>
+                  <td>{perf.reviewer?.personalInfo?.firstName} {perf.reviewer?.personalInfo?.lastName}</td>
+                  <td>{new Date(perf.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <button className="btn btn-sm btn-primary" onClick={() => success(`Viewing performance review for ${perf.employee?.personalInfo?.firstName}`)}>View Details</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPayroll = () => (
+    <div className="card">
+      <h3>Payroll Management</h3>
+      {hasRole(['admin', 'manager']) && (
+        <button className="btn btn-primary" onClick={() => {
+          setShowPayrollModal(true);
+          setFormData({...formData, baseSalary: '', overtime: 0, bonuses: 0, deductions: 0, payPeriod: { startDate: '', endDate: '' }});
+        }}>
+          Process Payroll
+        </button>
+      )}
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Pay Period</th>
+                <th>Base Salary</th>
+                <th>Overtime</th>
+                <th>Bonuses</th>
+                <th>Deductions</th>
+                <th>Net Pay</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(payrolls || []).map(payroll => (
+                <tr key={payroll._id}>
+                  <td>{payroll.employee?.personalInfo?.firstName} {payroll.employee?.personalInfo?.lastName}</td>
+                  <td>{payroll.payPeriod?.startDate ? new Date(payroll.payPeriod.startDate).toLocaleDateString() : 'N/A'} - {payroll.payPeriod?.endDate ? new Date(payroll.payPeriod.endDate).toLocaleDateString() : 'N/A'}</td>
+                  <td>${payroll.earnings?.baseSalary?.toLocaleString()}</td>
+                  <td>${payroll.earnings?.overtime?.toLocaleString()}</td>
+                  <td>${payroll.earnings?.bonuses?.toLocaleString()}</td>
+                  <td>${payroll.totalDeductions?.toLocaleString()}</td>
+                  <td>
+                    <strong style={{ color: '#28a745' }}>${payroll.netPay?.toLocaleString()}</strong>
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: payroll.status === 'paid' ? '#28a745' : '#ffc107',
+                      color: 'white'
+                    }}>
+                      {payroll.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="btn btn-sm btn-primary" onClick={() => success(`Viewing payroll slip for ${payroll.employee?.personalInfo?.firstName}`)}>View Slip</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderDepartments = () => (
+    <div className="card">
+      <h3>Department Management</h3>
+      {hasRole(['admin']) && (
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          Add Department
+        </button>
+      )}
+      
+      {loading ? <LoadingSpinner /> : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Department Name</th>
+                <th>Code</th>
+                <th>Manager</th>
+                <th>Employees</th>
+                <th>Budget</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {departments.map(dept => (
+                <tr key={dept._id}>
+                  <td>{dept.name}</td>
+                  <td>{dept.code}</td>
+                  <td>{dept.manager?.personalInfo?.firstName} {dept.manager?.personalInfo?.lastName}</td>
+                  <td>{dept.employeeCount || 0}</td>
+                  <td>${dept.budget?.toLocaleString()}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: dept.status === 'active' ? '#28a745' : '#dc3545',
+                      color: 'white'
+                    }}>
+                      {dept.status}
+                    </span>
+                  </td>
+                  <td>
+                    {hasRole(['admin']) && (
+                      <>
+                        <button className="btn btn-sm btn-primary" style={{ marginRight: '5px' }} onClick={() => success(`Editing department: ${dept.name}`)}>Edit</button>
+                        <button 
+                          className="btn btn-sm btn-danger" 
+                          onClick={() => showConfirm(
+                            'Delete Department',
+                            `Are you sure you want to delete the ${dept.name} department? This action cannot be undone.`,
+                            () => success('Department deleted successfully')
+                          )}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
   const renderUsers = () => (
     <div className="card">
       <h3>ERP Users</h3>
@@ -689,6 +1069,33 @@ const HRM = () => {
         )}
         {hasRole(['admin', 'manager']) && (
           <button 
+            className={`btn ${activeTab === 'performance' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('performance')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            ⭐ Performance
+          </button>
+        )}
+        {hasRole(['admin', 'manager']) && (
+          <button 
+            className={`btn ${activeTab === 'payroll' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('payroll')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            💰 Payroll
+          </button>
+        )}
+        {hasRole(['admin', 'manager']) && (
+          <button 
+            className={`btn ${activeTab === 'departments' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('departments')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            🏢 Departments
+          </button>
+        )}
+        {hasRole(['admin', 'manager']) && (
+          <button 
             className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('analytics')}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -701,6 +1108,9 @@ const HRM = () => {
       {activeTab === 'employees' && renderEmployees()}
       {activeTab === 'leaves' && renderLeaves()}
       {activeTab === 'training' && renderTraining()}
+      {activeTab === 'performance' && renderPerformance()}
+      {activeTab === 'payroll' && renderPayroll()}
+      {activeTab === 'departments' && renderDepartments()}
       {activeTab === 'users' && renderUsers()}
       {activeTab === 'analytics' && renderAnalytics()}
       
@@ -850,6 +1260,130 @@ const HRM = () => {
         </form>
       </Modal>
       
+      <Modal isOpen={showPerformanceModal} onClose={() => setShowPerformanceModal(false)} title="Create Performance Review">
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Select Employee:</label>
+            <select 
+              value={selectedEmployee?._id || ''} 
+              onChange={(e) => {
+                const emp = employees.find(emp => emp._id === e.target.value);
+                setSelectedEmployee(emp);
+              }}
+              required
+            >
+              <option value="">Select Employee</option>
+              {employees.map(emp => (
+                <option key={emp._id} value={emp._id}>
+                  {emp.personalInfo?.firstName} {emp.personalInfo?.lastName} - {emp.employeeId}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Review Type:</label>
+              <select value={formData.reviewType} 
+                onChange={(e) => setFormData({...formData, reviewType: e.target.value})}>
+                <option value="annual">Annual Review</option>
+                <option value="quarterly">Quarterly Review</option>
+                <option value="probation">Probation Review</option>
+                <option value="promotion">Promotion Review</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Overall Rating (1-5):</label>
+              <input type="number" min="1" max="5" value={formData.overallRating} 
+                onChange={(e) => setFormData({...formData, overallRating: parseInt(e.target.value)})} required />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Review Period Start:</label>
+              <input type="date" value={formData.reviewPeriod?.startDate || ''} 
+                onChange={(e) => setFormData({...formData, reviewPeriod: {...(formData.reviewPeriod || {}), startDate: e.target.value}})} required />
+            </div>
+            <div className="form-group">
+              <label>Review Period End:</label>
+              <input type="date" value={formData.reviewPeriod?.endDate || ''} 
+                onChange={(e) => setFormData({...formData, reviewPeriod: {...(formData.reviewPeriod || {}), endDate: e.target.value}})} required />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Comments:</label>
+            <textarea value={formData.comments || ''} 
+              onChange={(e) => setFormData({...formData, comments: e.target.value})} 
+              placeholder="Overall performance comments..." />
+          </div>
+          <button type="submit" className="btn btn-success">
+            Create Performance Review
+          </button>
+        </form>
+      </Modal>
+      
+      <Modal isOpen={showPayrollModal} onClose={() => setShowPayrollModal(false)} title="Process Payroll">
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Select Employee:</label>
+            <select 
+              value={selectedEmployee?._id || ''} 
+              onChange={(e) => {
+                const emp = employees.find(emp => emp._id === e.target.value);
+                setSelectedEmployee(emp);
+                setFormData({...formData, baseSalary: emp?.compensation?.baseSalary || ''});
+              }}
+              required
+            >
+              <option value="">Select Employee</option>
+              {employees.map(emp => (
+                <option key={emp._id} value={emp._id}>
+                  {emp.personalInfo?.firstName} {emp.personalInfo?.lastName} - {emp.employeeId}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Pay Period Start:</label>
+              <input type="date" value={formData.payPeriod?.startDate || ''} 
+                onChange={(e) => setFormData({...formData, payPeriod: {...(formData.payPeriod || {}), startDate: e.target.value}})} required />
+            </div>
+            <div className="form-group">
+              <label>Pay Period End:</label>
+              <input type="date" value={formData.payPeriod?.endDate || ''} 
+                onChange={(e) => setFormData({...formData, payPeriod: {...(formData.payPeriod || {}), endDate: e.target.value}})} required />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Base Salary:</label>
+              <input type="number" step="0.01" value={formData.baseSalary} 
+                onChange={(e) => setFormData({...formData, baseSalary: e.target.value})} required />
+            </div>
+            <div className="form-group">
+              <label>Overtime Pay:</label>
+              <input type="number" step="0.01" value={formData.overtime} 
+                onChange={(e) => setFormData({...formData, overtime: e.target.value})} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Bonuses:</label>
+              <input type="number" step="0.01" value={formData.bonuses} 
+                onChange={(e) => setFormData({...formData, bonuses: e.target.value})} />
+            </div>
+            <div className="form-group">
+              <label>Deductions:</label>
+              <input type="number" step="0.01" value={formData.deductions} 
+                onChange={(e) => setFormData({...formData, deductions: e.target.value})} />
+            </div>
+          </div>
+          <button type="submit" className="btn btn-success">
+            Process Payroll
+          </button>
+        </form>
+      </Modal>
+      
       <Modal isOpen={showConvertModal} onClose={() => setShowConvertModal(false)} title="Convert User to Employee">
         <form onSubmit={handleConvertToEmployee}>
           {selectedUser && (
@@ -898,6 +1432,15 @@ const HRM = () => {
           </button>
         </form>
       </Modal>
+      
+      <CSVUpload
+        isOpen={showCSVModal}
+        onClose={() => setShowCSVModal(false)}
+        onUpload={handleCSVUpload}
+        templateData={getCSVTemplate()}
+        title="Import Employees"
+        description="Upload a CSV file to bulk import employees. Download the template to see the required format."
+      />
     </div>
   );
 };

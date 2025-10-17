@@ -27,7 +27,7 @@ const Attendance = () => {
       const response = await axios.get(`http://localhost:5000/api/attendance?date=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAttendance(response.data);
+      setAttendance(response.data || []);
     } catch (error) {
       console.error('Error fetching attendance:', error);
     }
@@ -51,7 +51,7 @@ const Attendance = () => {
       const response = await axios.get('http://localhost:5000/api/attendance/analytics', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAnalytics(response.data);
+      setAnalytics(response.data || {});
     } catch (error) {
       console.error('Error fetching analytics:', error);
     }
