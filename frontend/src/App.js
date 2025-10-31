@@ -1,9 +1,13 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ToastProvider } from './context/ToastContext';
 import { setupAxiosInterceptors } from './utils/csrf';
+import { initSentry, SentryErrorBoundary } from './config/sentry';
+import { queryClient } from './config/queryClient';
 import NotificationPanel from './components/NotificationPanel';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
@@ -39,56 +43,65 @@ import './App.scss';
 
 function App() {
   useEffect(() => {
+    // Initialize Sentry error tracking
+    initSentry();
+    // Setup axios interceptors for CSRF
     setupAxiosInterceptors();
   }, []);
 
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <SocketProvider>
-          <Router>
-        <div className="App">
-          <Navbar />
-          <div className="main-content">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/login" element={<Login />} />
+    <SentryErrorBoundary fallback={<div>An error occurred. Please refresh the page.</div>}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ToastProvider>
+            <SocketProvider>
+              <Router>
+                <div className="App">
+                  <Navbar />
+                  <div className="main-content">
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/login" element={<Login />} />
 
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/sales" element={<Sales />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="/attendance" element={<Attendance />} />
-              <Route path="/checkin" element={<CheckIn />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/crm" element={<CRM />} />
-              <Route path="/crm-system" element={<CRMSystem />} />
-              <Route path="/hrm" element={<HRM />} />
-              <Route path="/inventory-mgmt" element={<InventoryManagement />} />
-              <Route path="/sales-mgmt" element={<SalesManagement />} />
-              <Route path="/finance" element={<Finance />} />
-              <Route path="/finance-mgmt" element={<FinanceManagement />} />
-              <Route path="/calendar-system" element={<CalendarSystem />} />
-              <Route path="/attendance-system" element={<AttendanceSystem />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile-system" element={<ProfileSystem />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin-panel" element={<AdminPanel />} />
-              <Route path="/procurement" element={<Procurement />} />
-              <Route path="/helpdesk" element={<Helpdesk />} />
-              <Route path="/manufacturing" element={<Manufacturing />} />
-              <Route path="/ai-insights" element={<AIInsights />} />
-              <Route path="/ai-assistant" element={<AIAssistantPage />} />
-              <Route path="/system-config" element={<SystemConfig />} />
-              <Route path="/integrations" element={<Integrations />} />
-            </Routes>
-          </div>
-          <NotificationPanel />
-          <AIAssistant />
-        </div>
-          </Router>
-        </SocketProvider>
-      </ToastProvider>
-    </AuthProvider>
+                      <Route path="/inventory" element={<Inventory />} />
+                      <Route path="/sales" element={<Sales />} />
+                      <Route path="/calendar" element={<Calendar />} />
+                      <Route path="/attendance" element={<Attendance />} />
+                      <Route path="/checkin" element={<CheckIn />} />
+                      <Route path="/projects" element={<Projects />} />
+                      <Route path="/crm" element={<CRM />} />
+                      <Route path="/crm-system" element={<CRMSystem />} />
+                      <Route path="/hrm" element={<HRM />} />
+                      <Route path="/inventory-mgmt" element={<InventoryManagement />} />
+                      <Route path="/sales-mgmt" element={<SalesManagement />} />
+                      <Route path="/finance" element={<Finance />} />
+                      <Route path="/finance-mgmt" element={<FinanceManagement />} />
+                      <Route path="/calendar-system" element={<CalendarSystem />} />
+                      <Route path="/attendance-system" element={<AttendanceSystem />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/profile-system" element={<ProfileSystem />} />
+                      <Route path="/admin" element={<Admin />} />
+                      <Route path="/admin-panel" element={<AdminPanel />} />
+                      <Route path="/procurement" element={<Procurement />} />
+                      <Route path="/helpdesk" element={<Helpdesk />} />
+                      <Route path="/manufacturing" element={<Manufacturing />} />
+                      <Route path="/ai-insights" element={<AIInsights />} />
+                      <Route path="/ai-assistant" element={<AIAssistantPage />} />
+                      <Route path="/system-config" element={<SystemConfig />} />
+                      <Route path="/integrations" element={<Integrations />} />
+                    </Routes>
+                  </div>
+                  <NotificationPanel />
+                  <AIAssistant />
+                </div>
+              </Router>
+            </SocketProvider>
+          </ToastProvider>
+        </AuthProvider>
+        {/* React Query Devtools - only visible in development */}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </SentryErrorBoundary>
   );
 }
 

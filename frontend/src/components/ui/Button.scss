@@ -1,0 +1,147 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+  
+  &:focus {
+    outline: 2px solid #2196f3;
+    outline-offset: 2px;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  // Variants
+  &-primary {
+    background: #2196f3;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #1976d2;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+  }
+  
+  &-secondary {
+    background: transparent;
+    color: #2196f3;
+    border: 1px solid #2196f3;
+    
+    &:hover:not(:disabled) {
+      background: rgba(33, 150, 243, 0.1);
+    }
+  }
+  
+  &-success {
+    background: #4caf50;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #45a049;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+    }
+  }
+  
+  &-danger {
+    background: #f44336;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #da190b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+    }
+  }
+  
+  &-warning {
+    background: #ff9800;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #f57c00;
+    }
+  }
+  
+  &-ghost {
+    background: transparent;
+    color: #666;
+    
+    &:hover:not(:disabled) {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+  
+  // Sizes
+  &-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    gap: 4px;
+  }
+  
+  &-md {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  &-lg {
+    padding: 14px 28px;
+    font-size: 16px;
+    gap: 10px;
+  }
+  
+  &-full-width {
+    width: 100%;
+  }
+  
+  // Loading state
+  &-loading {
+    color: transparent;
+    pointer-events: none;
+    
+    .btn-text {
+      visibility: hidden;
+    }
+    
+    .btn-icon {
+      visibility: hidden;
+    }
+    
+    .btn-spinner {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+  }
+  
+  &-icon {
+    display: flex;
+    align-items: center;
+    font-size: 1.1em;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

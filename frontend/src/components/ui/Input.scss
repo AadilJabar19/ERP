@@ -1,0 +1,109 @@
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  
+  &.input-full-width {
+    width: 100%;
+  }
+}
+
+.input-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  display: block;
+  
+  .input-required {
+    color: #f44336;
+    margin-left: 2px;
+  }
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  &.input-with-icon .input-field {
+    padding-left: 40px;
+  }
+  
+  &.input-error .input-field {
+    border-color: #f44336;
+    
+    &:focus {
+      outline-color: #f44336;
+      border-color: #f44336;
+    }
+  }
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  color: #666;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: white;
+  
+  &:focus {
+    outline: 2px solid #2196f3;
+    outline-offset: 0;
+    border-color: transparent;
+  }
+  
+  &:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+    color: #999;
+  }
+  
+  &::placeholder {
+    color: #999;
+  }
+}
+
+.input-error-text {
+  font-size: 12px;
+  color: #f44336;
+  margin-top: 4px;
+  display: block;
+}
+
+.input-helper-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  display: block;
+}
+
+// Textarea variant
+textarea.input-field {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+// Select variant
+select.input-field {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}

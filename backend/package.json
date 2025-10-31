@@ -11,10 +11,15 @@
     "seed": "node scripts/seedData.js",
     "drop-db": "node scripts/dropDB.js",
     "test-login": "node scripts/testLogin.js",
-    "check-users": "node scripts/checkUsers.js"
+    "check-users": "node scripts/checkUsers.js",
+    "add-indexes": "node scripts/addIndexes.js",
+    "test": "jest"
   },
   "dependencies": {
+    "@sentry/node": "^8.47.0",
+    "@sentry/profiling-node": "^8.47.0",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.7.5",
     "cors": "^2.8.5",
     "csrf": "^3.1.0",
     "csurf": "^1.11.0",
@@ -22,11 +27,21 @@
     "express": "^4.18.2",
     "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.2",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.5.0",
-    "socket.io": "^4.8.1"
+    "multer": "^1.4.5-lts.1",
+    "redis": "^4.7.0",
+    "sharp": "^0.33.5",
+    "socket.io": "^4.8.1",
+    "winston": "^3.18.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.1",
+    "supertest": "^7.1.4"
   }
 }
