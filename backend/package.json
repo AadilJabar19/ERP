@@ -1,11 +1,17 @@
 {
-  "name": "mini-erp-backend",
+  "name": "claryx-erp-backend",
   "version": "1.0.0",
-  "description": "Mini ERP Backend using Node.js and Express",
+  "description": "Claryx ERP System Backend using Node.js and Express",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "verify": "node scripts/verifySetup.js",
+    "create-admin": "node scripts/createAdmin.js",
+    "seed": "node scripts/seedData.js",
+    "drop-db": "node scripts/dropDB.js",
+    "test-login": "node scripts/testLogin.js",
+    "check-users": "node scripts/checkUsers.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

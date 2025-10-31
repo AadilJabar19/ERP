@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 
 const Manufacturing = () => {
   const { token, hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [activeTab, setActiveTab] = useState('bom');
   const [boms, setBoms] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
@@ -151,15 +156,67 @@ const Manufacturing = () => {
     });
   };
 
+  const handleBulkDelete = (type) => {
+    if (selectedItems.length === 0) return;
+    showConfirm(
+      `Delete ${type}`,
+      `Are you sure you want to delete ${selectedItems.length} selected ${type.toLowerCase()}(s)?`,
+      async () => {
+        try {
+          const endpoint = type === 'BOMs' ? 'bom' : 'work-orders';
+          await Promise.all(selectedItems.map(id => 
+            axios.delete(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/manufacturing/${endpoint}/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ));
+          success(`${selectedItems.length} ${type.toLowerCase()}(s) deleted successfully`);
+          clearSelection();
+          if (type === 'BOMs') fetchBoms();
+          else fetchWorkOrders();
+        } catch (err) {
+          error(`Error deleting ${type.toLowerCase()}s`);
+        }
+      }
+    );
+  };
+
   const renderBomTab = () => (
     <div>
-      {hasRole(['admin', 'manager']) && (
-        <div className="btn-group" style={{ marginBottom: '20px' }}>
-          <button className="btn btn-primary" onClick={() => setShowBomForm(true)}>
-            ➕ Create BOM
-          </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => setShowBomForm(true)}>
+              ➕ Create BOM
+            </button>
+          )}
         </div>
-      )}
+        {selectedItems.length > 0 && (
+          <ActionDropdown
+            actions={[
+              {
+                label: `Activate (${selectedItems.length})`,
+                icon: '✅',
+                onClick: () => {
+                  success(`Activated ${selectedItems.length} BOM(s)`);
+                  clearSelection();
+                },
+                className: 'success'
+              },
+              {
+                label: `Delete (${selectedItems.length})`,
+                icon: '🗑️',
+                onClick: () => handleBulkDelete('BOMs'),
+                className: 'danger'
+              },
+              {
+                label: 'Clear Selection',
+                icon: '✖️',
+                onClick: clearSelection
+              }
+            ]}
+          />
+        )}
+      </div>
 
       {showBomForm && (
         <div className="card">
@@ -253,6 +310,13 @@ const Manufacturing = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, boms)}
+                  />
+                </th>
                 <th>Product</th>
                 <th>Version</th>
                 <th>Components</th>
@@ -263,6 +327,13 @@ const Manufacturing = () => {
             <tbody>
               {boms.map(bom => (
                 <tr key={bom._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(bom._id)}
+                      onChange={(e) => handleSelectItem(e, bom._id)}
+                    />
+                  </td>
                   <td>{bom.product?.name}</td>
                   <td>{bom.version}</td>
                   <td>{bom.components?.length} components</td>
@@ -283,13 +354,50 @@ const Manufacturing = () => {
 
   const renderWorkOrdersTab = () => (
     <div>
-      {hasRole(['admin', 'manager']) && (
-        <div className="btn-group" style={{ marginBottom: '20px' }}>
-          <button className="btn btn-primary" onClick={() => setShowWoForm(true)}>
-            ➕ Create Work Order
-          </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => setShowWoForm(true)}>
+              ➕ Create Work Order
+            </button>
+          )}
         </div>
-      )}
+        {selectedItems.length > 0 && (
+          <ActionDropdown
+            actions={[
+              {
+                label: `Start Production (${selectedItems.length})`,
+                icon: '🏭',
+                onClick: () => {
+                  success(`Started production for ${selectedItems.length} work order(s)`);
+                  clearSelection();
+                },
+                className: 'success'
+              },
+              {
+                label: `Complete (${selectedItems.length})`,
+                icon: '✅',
+                onClick: () => {
+                  success(`Completed ${selectedItems.length} work order(s)`);
+                  clearSelection();
+                },
+                className: 'primary'
+              },
+              {
+                label: `Delete (${selectedItems.length})`,
+                icon: '🗑️',
+                onClick: () => handleBulkDelete('Work Orders'),
+                className: 'danger'
+              },
+              {
+                label: 'Clear Selection',
+                icon: '✖️',
+                onClick: clearSelection
+              }
+            ]}
+          />
+        )}
+      </div>
 
       {showWoForm && (
         <div className="card">
@@ -361,6 +469,13 @@ const Manufacturing = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, workOrders)}
+                  />
+                </th>
                 <th>Order #</th>
                 <th>Product</th>
                 <th>Quantity</th>
@@ -373,6 +488,13 @@ const Manufacturing = () => {
             <tbody>
               {workOrders.map(wo => (
                 <tr key={wo._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(wo._id)}
+                      onChange={(e) => handleSelectItem(e, wo._id)}
+                    />
+                  </td>
                   <td>{wo.orderNumber}</td>
                   <td>{wo.product?.name}</td>
                   <td>{wo.quantity}</td>

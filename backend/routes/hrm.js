@@ -275,6 +275,40 @@ router.post('/users/:id/convert-to-employee', auth, roleAuth(['admin', 'manager'
   }
 });
 
+router.post('/employees/:id/upgrade-to-user', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    
+    // Check if employee already has a user account
+    if (employee.userId) {
+      return res.status(400).json({ message: 'Employee already has a user account' });
+    }
+    
+    const { password, role = 'employee' } = req.body;
+    
+    const user = new User({
+      name: employee.fullName,
+      email: employee.contactInfo.email,
+      password,
+      role,
+      isActive: true
+    });
+    
+    await user.save();
+    
+    // Link the user to the employee
+    employee.userId = user._id;
+    await employee.save();
+    
+    res.status(201).json({ user, employee });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // Department Management Routes
 router.get('/departments', auth, async (req, res) => {
   try {
@@ -391,6 +425,55 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
       leaveStats,
       trainingStats
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Convert employee to ERP user
+router.post('/employees/:id/convert-to-user', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    
+    // Check if employee already has a user account
+    if (employee.userId) {
+      return res.status(400).json({ message: 'Employee already has a user account' });
+    }
+    
+    const { password, role = 'employee' } = req.body;
+    
+    const user = new User({
+      name: employee.fullName,
+      email: employee.contactInfo.email,
+      password,
+      role,
+      isActive: true
+    });
+    
+    await user.save();
+    
+    // Link the user to the employee
+    employee.userId = user._id;
+    await employee.save();
+    
+    res.status(201).json({ user, employee });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Get employees without user accounts
+router.get('/employees/without-users', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  try {
+    const employees = await Employee.find({ 
+      userId: { $exists: false },
+      status: 'active'
+    }).select('employeeId personalInfo contactInfo employment');
+    
+    res.json(employees);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

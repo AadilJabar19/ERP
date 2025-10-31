@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const createTestUser = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mini-erp');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/claryx-erp');
     
     // Check if admin user exists
     const existingAdmin = await User.findOne({ email: 'admin@test.com' });

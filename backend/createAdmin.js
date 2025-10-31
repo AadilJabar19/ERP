@@ -3,7 +3,7 @@ const User = require('./models/User');
 
 const createAdmin = async () => {
   try {
-    await mongoose.connect('mongodb://localhost:27017/mini-erp');
+    await mongoose.connect('mongodb://localhost:27017/claryx-erp');
     
     const existingAdmin = await User.findOne({ email: 'admin@test.com' });
     if (existingAdmin) {

@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const CRM = () => {
   const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [customers, setCustomers] = useState([]);
   const [analytics, setAnalytics] = useState({});
   const [activeTab, setActiveTab] = useState('customers');
@@ -50,6 +55,7 @@ const CRM = () => {
       setTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error('Error fetching customers:', error);
+      error('Failed to load customers: ' + (error.response?.data?.message || 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -65,6 +71,7 @@ const CRM = () => {
       setAnalytics(response.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      error('Failed to load analytics: ' + (error.response?.data?.message || 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -74,18 +81,25 @@ const CRM = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
+      const csrfResponse = await axios.get('http://localhost:5000/api/csrf-token');
+      
       await axios.post('http://localhost:5000/api/customers', formData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'X-CSRF-Token': csrfResponse.data.csrfToken
+        }
       });
+      
       setFormData({
         companyName: '', contactPerson: '', email: '', phone: '',
         category: 'retail', creditLimit: '', paymentTerms: 'net30',
         addresses: [{ type: 'billing', street: '', city: '', state: '', zipCode: '', country: '', isDefault: true }]
       });
       setShowModal(false);
+      success('Customer created successfully');
       fetchCustomers();
-    } catch (error) {
-      console.error('Error creating customer:', error);
+    } catch (err) {
+      error('Error creating customer: ' + (err.response?.data?.message || 'Failed to create customer'));
     }
   };
 
@@ -101,12 +115,6 @@ const CRM = () => {
 
   const renderCustomers = () => (
     <div>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ marginBottom: '20px' }}>
-          Add Customer
-        </button>
-      )}
-
       <SearchFilter 
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -120,13 +128,92 @@ const CRM = () => {
       />
 
       <div className="card">
-        <h3>Customer Database</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0 }}>Customer Database</h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {hasRole(['admin', 'manager']) && (
+              <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                Add Customer
+              </button>
+            )}
+            {selectedItems.length > 0 && (
+              <ActionDropdown
+                actions={[
+                  {
+                    label: `Edit (${selectedItems.length})`,
+                    icon: '✏️',
+                    onClick: () => {
+                      if (selectedItems.length === 1) {
+                        success('Edit customer');
+                      } else {
+                        error('Please select only one customer to edit');
+                      }
+                    },
+                    className: 'primary',
+                    disabled: selectedItems.length !== 1
+                  },
+                  {
+                    label: `Delete (${selectedItems.length})`,
+                    icon: '🗑️',
+                    onClick: () => {
+                      showConfirm(
+                        'Delete Customers',
+                        `Delete ${selectedItems.length} customer(s)?`,
+                        async () => {
+                          try {
+                            const token = localStorage.getItem('token');
+                            const csrfResponse = await axios.get('http://localhost:5000/api/csrf-token');
+                            await Promise.all(selectedItems.map(id => 
+                              axios.delete(`http://localhost:5000/api/customers/${id}`, {
+                                headers: { 
+                                  Authorization: `Bearer ${token}`,
+                                  'X-CSRF-Token': csrfResponse.data.csrfToken
+                                }
+                              })
+                            ));
+                            success(`Deleted ${selectedItems.length} customer(s)`);
+                            clearSelection();
+                            fetchCustomers();
+                          } catch (err) {
+                            error('Error deleting customers: ' + (err.response?.data?.message || 'Failed to delete customers'));
+                          }
+                        }
+                      );
+                    },
+                    className: 'danger'
+                  },
+                  {
+                    label: `Export (${selectedItems.length})`,
+                    icon: '📥',
+                    onClick: () => {
+                      success(`Exporting ${selectedItems.length} customer(s)`);
+                      clearSelection();
+                    },
+                    className: 'primary'
+                  },
+                  {
+                    label: 'Clear Selection',
+                    icon: '✖️',
+                    onClick: clearSelection
+                  }
+                ]}
+              />
+            )}
+          </div>
+        </div>
         {loading ? <LoadingSpinner /> : (
           <>
             <div className="table-container">
               <table className="table">
                 <thead>
                   <tr>
+                    <th>
+                      <input 
+                        type="checkbox" 
+                        checked={selectAll}
+                        onChange={(e) => handleSelectAll(e, customers)}
+                      />
+                    </th>
                     <th>Customer Code</th>
                     <th>Company Name</th>
                     <th>Contact Person</th>
@@ -141,6 +228,13 @@ const CRM = () => {
                 <tbody>
                   {customers.map(customer => (
                     <tr key={customer._id}>
+                      <td>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedItems.includes(customer._id)}
+                          onChange={(e) => handleSelectItem(e, customer._id)}
+                        />
+                      </td>
                       <td>{customer.customerCode}</td>
                       <td>{customer.companyName}</td>
                       <td>{customer.contactPerson}</td>

@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const dropDatabase = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mini-erp');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/claryx-erp');
     console.log('Connected to MongoDB');
     
     await mongoose.connection.db.dropDatabase();

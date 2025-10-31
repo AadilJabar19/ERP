@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 
 const Sales = () => {
+  const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -34,6 +41,7 @@ const Sales = () => {
       setSales(response.data.sales || []);
     } catch (error) {
       console.error('Error fetching sales:', error);
+      error('Failed to load sales: ' + (error.response?.data?.message || 'Network error'));
     }
   };
 
@@ -46,6 +54,7 @@ const Sales = () => {
       setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+      error('Failed to load products: ' + (error.response?.data?.message || 'Network error'));
     }
   };
 
@@ -74,6 +83,7 @@ const Sales = () => {
       fetchSales();
     } catch (error) {
       console.error('Error creating sale:', error);
+      error('Failed to create sale: ' + (error.response?.data?.message || 'Network error'));
     }
   };
 
@@ -215,11 +225,53 @@ const Sales = () => {
       )}
 
       <div className="card">
-        <h3>Sales List</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0 }}>Sales List</h3>
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `View (${selectedItems.length})`,
+                  icon: '👁️',
+                  onClick: () => {
+                    if (selectedItems.length === 1) {
+                      success('View sale details');
+                    } else {
+                      error('Please select only one sale to view');
+                    }
+                  },
+                  className: 'primary',
+                  disabled: selectedItems.length !== 1
+                },
+                {
+                  label: `Export (${selectedItems.length})`,
+                  icon: '📥',
+                  onClick: () => {
+                    success(`Exporting ${selectedItems.length} sale(s)`);
+                    clearSelection();
+                  },
+                  className: 'primary'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
         <div className="table-container">
           <table className="table">
           <thead>
             <tr>
+              <th>
+                <input 
+                  type="checkbox" 
+                  checked={selectAll}
+                  onChange={(e) => handleSelectAll(e, sales)}
+                />
+              </th>
               <th>Sale ID</th>
               <th>Customer</th>
               <th>Items</th>
@@ -231,12 +283,19 @@ const Sales = () => {
           <tbody>
             {sales.map(sale => (
               <tr key={sale._id}>
+                <td>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedItems.includes(sale._id)}
+                    onChange={(e) => handleSelectItem(e, sale._id)}
+                  />
+                </td>
                 <td>{sale.saleId}</td>
-                <td>{sale.customer.name}</td>
+                <td>{sale.customer?.name || 'N/A'}</td>
                 <td>{sale.items.length} items</td>
                 <td>${sale.totalAmount}</td>
                 <td>{sale.status}</td>
-                <td>{new Date(sale.saleDate).toLocaleDateString()}</td>
+                <td>{sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : 'N/A'}</td>
               </tr>
             ))}
           </tbody>

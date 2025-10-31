@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const checkUsers = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mini-erp');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/claryx-erp');
     console.log('Connected to MongoDB');
     
     const users = await User.find({});

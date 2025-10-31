@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Projects = () => {
   const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [analytics, setAnalytics] = useState({});
@@ -111,14 +116,31 @@ const Projects = () => {
     return colors[priority] || '#6c757d';
   };
 
+  const handleBulkDelete = () => {
+    if (selectedItems.length === 0) return;
+    showConfirm(
+      'Delete Projects',
+      `Are you sure you want to delete ${selectedItems.length} selected project(s)? This action cannot be undone.`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await Promise.all(selectedItems.map(id => 
+            axios.delete(`http://localhost:5000/api/projects/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ));
+          success(`${selectedItems.length} project(s) deleted successfully`);
+          clearSelection();
+          fetchProjects();
+        } catch (err) {
+          error('Error deleting projects');
+        }
+      }
+    );
+  };
+
   const renderProjects = () => (
     <div>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ marginBottom: '20px' }}>
-          Add Project
-        </button>
-      )}
-
       <SearchFilter 
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -134,12 +156,67 @@ const Projects = () => {
       />
 
       <div className="card">
-        <h3>Projects Overview</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0 }}>Projects Overview</h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {hasRole(['admin', 'manager']) && (
+              <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                Add Project
+              </button>
+            )}
+            {selectedItems.length > 0 && (
+              <ActionDropdown
+                actions={[
+                  {
+                    label: `Edit (${selectedItems.length})`,
+                    icon: '✏️',
+                    onClick: () => {
+                      if (selectedItems.length === 1) {
+                        success('Edit project functionality');
+                      } else {
+                        error('Please select only one project to edit');
+                      }
+                    },
+                    className: 'primary',
+                    disabled: selectedItems.length !== 1
+                  },
+                  {
+                    label: `Delete (${selectedItems.length})`,
+                    icon: '🗑️',
+                    onClick: handleBulkDelete,
+                    className: 'danger'
+                  },
+                  {
+                    label: `Export (${selectedItems.length})`,
+                    icon: '📥',
+                    onClick: () => {
+                      success(`Exporting ${selectedItems.length} project(s)`);
+                      clearSelection();
+                    },
+                    className: 'primary'
+                  },
+                  {
+                    label: 'Clear Selection',
+                    icon: '✖️',
+                    onClick: clearSelection
+                  }
+                ]}
+              />
+            )}
+          </div>
+        </div>
         {loading ? <LoadingSpinner /> : (
           <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
+                  <th>
+                    <input 
+                      type="checkbox" 
+                      checked={selectAll}
+                      onChange={(e) => handleSelectAll(e, filteredProjects)}
+                    />
+                  </th>
                   <th>Project Code</th>
                   <th>Name</th>
                   <th>Client</th>
@@ -154,6 +231,13 @@ const Projects = () => {
               <tbody>
                 {filteredProjects.map(project => (
                   <tr key={project._id}>
+                    <td>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedItems.includes(project._id)}
+                        onChange={(e) => handleSelectItem(e, project._id)}
+                      />
+                    </td>
                     <td>{project.code}</td>
                     <td>{project.name}</td>
                     <td>{project.client}</td>

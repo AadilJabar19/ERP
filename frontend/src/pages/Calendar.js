@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Calendar = () => {
   const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [events, setEvents] = useState([]);
   const [analytics, setAnalytics] = useState({});
   const [activeTab, setActiveTab] = useState('calendar');
@@ -253,6 +258,107 @@ const Calendar = () => {
               )}
             </div>
           ))}
+        </div>
+      </div>
+      
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0 }}>Event List</h3>
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Edit (${selectedItems.length})`,
+                  icon: '✏️',
+                  onClick: () => {
+                    if (selectedItems.length === 1) {
+                      success('Edit event functionality');
+                    } else {
+                      error('Please select only one event to edit');
+                    }
+                  },
+                  className: 'primary',
+                  disabled: selectedItems.length !== 1
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: () => {
+                    showConfirm(
+                      'Delete Events',
+                      `Delete ${selectedItems.length} event(s)?`,
+                      async () => {
+                        const token = localStorage.getItem('token');
+                        await Promise.all(selectedItems.map(id => 
+                          axios.delete(`http://localhost:5000/api/events/${id}`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                          })
+                        ));
+                        success(`Deleted ${selectedItems.length} event(s)`);
+                        clearSelection();
+                        fetchEvents();
+                      }
+                    );
+                  },
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, events)}
+                  />
+                </th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>All Day</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map(event => (
+                <tr key={event._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(event._id)}
+                      onChange={(e) => handleSelectItem(e, event._id)}
+                    />
+                  </td>
+                  <td>{event.title}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: event.type === 'meeting' ? '#3498db' : 
+                                     event.type === 'holiday' ? '#e74c3c' :
+                                     event.type === 'deadline' ? '#f39c12' :
+                                     event.type === 'training' ? '#2ecc71' : '#9b59b6',
+                      color: 'white'
+                    }}>
+                      {event.type}
+                    </span>
+                  </td>
+                  <td>{new Date(event.startDate).toLocaleDateString()}</td>
+                  <td>{new Date(event.endDate).toLocaleDateString()}</td>
+                  <td>{event.allDay ? 'Yes' : 'No'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

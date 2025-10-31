@@ -19,7 +19,7 @@ const systemConfigSchema = new mongoose.Schema({
 // Pre-populate with default configurations
 systemConfigSchema.statics.initializeDefaults = async function() {
   const defaults = [
-    { key: 'company.name', value: 'Mini ERP System', category: 'company', description: 'Company name' },
+    { key: 'company.name', value: 'Claryx ERP System', category: 'company', description: 'Company name' },
     { key: 'company.currency', value: 'USD', category: 'company', description: 'Default currency' },
     { key: 'security.sessionTimeout', value: 24, category: 'security', description: 'Session timeout in hours' },
     { key: 'security.passwordPolicy.minLength', value: 8, category: 'security', description: 'Minimum password length' },

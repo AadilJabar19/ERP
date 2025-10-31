@@ -22,7 +22,7 @@ const Attendance = require('../models/Attendance');
 const seedData = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mini-erp');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/claryx-erp');
     console.log('Connected to MongoDB');
 
     // Import Category model

@@ -1,4 +1,4 @@
-# Enterprise ERP System - MERN Stack
+# Claryx ERP System - MERN Stack
 
 A comprehensive Enterprise Resource Planning (ERP) system built with the MERN stack, featuring real-time updates, advanced security, and production-ready modules.
 
@@ -59,7 +59,7 @@ npm install
 
 Create `.env` file:
 ```env
-MONGODB_URI=mongodb://localhost:27017/mini-erp
+MONGODB_URI=mongodb://localhost:27017/claryx-erp
 JWT_SECRET=your-jwt-secret-key
 SESSION_SECRET=your-session-secret-key
 PORT=5000
@@ -102,7 +102,7 @@ npm start
 ## 🏗️ Project Structure
 
 ```
-mini-erp-mern/
+claryx-erp-system/
 ├── backend/
 │   ├── models/          # Database schemas
 │   ├── routes/          # API endpoints

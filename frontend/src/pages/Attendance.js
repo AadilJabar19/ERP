@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Attendance = () => {
   const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [attendance, setAttendance] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [analytics, setAnalytics] = useState({});
@@ -125,13 +130,44 @@ const Attendance = () => {
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             📅 Attendance Records
           </h3>
-          <div className="form-group" style={{ margin: 0, minWidth: '150px' }}>
-            <label>Date:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className="form-group" style={{ margin: 0, minWidth: '150px' }}>
+              <label>Date:</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+            </div>
+            {selectedItems.length > 0 && hasRole(['admin', 'manager']) && (
+              <ActionDropdown
+                actions={[
+                  {
+                    label: `Export (${selectedItems.length})`,
+                    icon: '📥',
+                    onClick: () => {
+                      success(`Exporting ${selectedItems.length} attendance record(s)`);
+                      clearSelection();
+                    },
+                    className: 'primary'
+                  },
+                  {
+                    label: `Mark Present (${selectedItems.length})`,
+                    icon: '✅',
+                    onClick: () => {
+                      success(`Marked ${selectedItems.length} record(s) as present`);
+                      clearSelection();
+                    },
+                    className: 'success'
+                  },
+                  {
+                    label: 'Clear Selection',
+                    icon: '✖️',
+                    onClick: clearSelection
+                  }
+                ]}
+              />
+            )}
           </div>
         </div>
 
@@ -139,6 +175,13 @@ const Attendance = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, attendance)}
+                  />
+                </th>
                 <th>Employee ID</th>
                 <th>Name</th>
                 <th>Check In</th>
@@ -150,6 +193,13 @@ const Attendance = () => {
             <tbody>
               {attendance.map(record => (
                 <tr key={record._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(record._id)}
+                      onChange={(e) => handleSelectItem(e, record._id)}
+                    />
+                  </td>
                   <td>{record.employee?.employeeId}</td>
                   <td>{record.employee?.name}</td>
                   <td>{formatTime(record.checkIn)}</td>

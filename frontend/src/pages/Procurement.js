@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 
 const Procurement = () => {
   const { token, hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [procurements, setProcurements] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -110,10 +115,49 @@ const Procurement = () => {
         <p>Manage purchase requests and supplier orders</p>
       </div>
 
-      <div className="btn-group" style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>
           ➕ New Purchase Request
         </button>
+        {selectedItems.length > 0 && (
+          <ActionDropdown
+            actions={[
+              {
+                label: `Approve (${selectedItems.length})`,
+                icon: '✅',
+                onClick: () => {
+                  selectedItems.forEach(id => approveProcurement(id));
+                  success(`Approved ${selectedItems.length} procurement(s)`);
+                  clearSelection();
+                },
+                className: 'success'
+              },
+              {
+                label: `Reject (${selectedItems.length})`,
+                icon: '❌',
+                onClick: () => {
+                  success(`Rejected ${selectedItems.length} procurement(s)`);
+                  clearSelection();
+                },
+                className: 'danger'
+              },
+              {
+                label: `Export (${selectedItems.length})`,
+                icon: '📥',
+                onClick: () => {
+                  success(`Exporting ${selectedItems.length} procurement(s)`);
+                  clearSelection();
+                },
+                className: 'primary'
+              },
+              {
+                label: 'Clear Selection',
+                icon: '✖️',
+                onClick: clearSelection
+              }
+            ]}
+          />
+        )}
       </div>
 
       {showForm && (
@@ -227,6 +271,13 @@ const Procurement = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, procurements)}
+                  />
+                </th>
                 <th>Request #</th>
                 <th>Supplier</th>
                 <th>Total Amount</th>
@@ -239,6 +290,13 @@ const Procurement = () => {
             <tbody>
               {procurements.map(procurement => (
                 <tr key={procurement._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(procurement._id)}
+                      onChange={(e) => handleSelectItem(e, procurement._id)}
+                    />
+                  </td>
                   <td>{procurement.requisitionNumber}</td>
                   <td>{procurement.supplier?.name}</td>
                   <td>${procurement.totalAmount?.toFixed(2)}</td>

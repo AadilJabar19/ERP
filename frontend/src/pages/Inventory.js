@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 
 const Inventory = () => {
   const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,6 +35,7 @@ const Inventory = () => {
       setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+      error('Failed to load products: ' + (error.response?.data?.message || 'Network error'));
     }
   };
 
@@ -67,6 +73,7 @@ const Inventory = () => {
         fetchProducts();
       } catch (error) {
         console.error('Error deleting product:', error);
+        error('Failed to delete product: ' + (error.response?.data?.message || 'Network error'));
       }
     }
   };
@@ -74,15 +81,6 @@ const Inventory = () => {
   return (
     <div className="page-container">
       <h1 className="page-title">Inventory Management</h1>
-      
-      {hasRole(['admin', 'manager']) && (
-        <button 
-          className="btn btn-primary" 
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? 'Cancel' : 'Add Product'}
-        </button>
-      )}
 
       {showForm && (
         <div className="card">
@@ -164,11 +162,81 @@ const Inventory = () => {
       )}
 
       <div className="card">
-        <h3>Product List</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0 }}>Product List</h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {hasRole(['admin', 'manager']) && (
+              <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+                {showForm ? 'Cancel' : 'Add Product'}
+              </button>
+            )}
+            {selectedItems.length > 0 && (
+              <ActionDropdown
+                actions={[
+                  {
+                    label: `Edit (${selectedItems.length})`,
+                    icon: '✏️',
+                    onClick: () => {
+                      if (selectedItems.length === 1) {
+                        success('Edit product');
+                      } else {
+                        error('Please select only one product to edit');
+                      }
+                    },
+                    className: 'primary',
+                    disabled: selectedItems.length !== 1
+                  },
+                  {
+                    label: `Delete (${selectedItems.length})`,
+                    icon: '🗑️',
+                    onClick: () => {
+                      showConfirm(
+                        'Delete Products',
+                        `Delete ${selectedItems.length} product(s)?`,
+                        async () => {
+                          try {
+                            const token = localStorage.getItem('token');
+                            const csrfResponse = await axios.get('http://localhost:5000/api/csrf-token');
+                            await Promise.all(selectedItems.map(id => 
+                              axios.delete(`http://localhost:5000/api/inventory/products/${id}`, {
+                                headers: { 
+                                  Authorization: `Bearer ${token}`,
+                                  'X-CSRF-Token': csrfResponse.data.csrfToken
+                                }
+                              })
+                            ));
+                            success(`Deleted ${selectedItems.length} product(s)`);
+                            clearSelection();
+                            fetchProducts();
+                          } catch (err) {
+                            error('Error deleting products: ' + (err.response?.data?.message || 'Failed to delete products'));
+                          }
+                        }
+                      );
+                    },
+                    className: 'danger'
+                  },
+                  {
+                    label: 'Clear Selection',
+                    icon: '✖️',
+                    onClick: clearSelection
+                  }
+                ]}
+              />
+            )}
+          </div>
+        </div>
         <div className="table-container">
           <table className="table">
           <thead>
             <tr>
+              <th>
+                <input 
+                  type="checkbox" 
+                  checked={selectAll}
+                  onChange={(e) => handleSelectAll(e, products)}
+                />
+              </th>
               <th>ID</th>
               <th>Name</th>
               <th>Category</th>
@@ -176,12 +244,18 @@ const Inventory = () => {
               <th>Quantity</th>
               <th>Min Stock</th>
               <th>Status</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {products.map(product => (
               <tr key={product._id}>
+                <td>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedItems.includes(product._id)}
+                    onChange={(e) => handleSelectItem(e, product._id)}
+                  />
+                </td>
                 <td>{product.productId}</td>
                 <td>{product.name}</td>
                 <td>{product.category}</td>
@@ -195,16 +269,6 @@ const Inventory = () => {
                   }}>
                     {product.quantity <= product.minStock ? 'Low Stock' : 'In Stock'}
                   </span>
-                </td>
-                <td>
-                  {hasRole(['admin']) && (
-                    <button 
-                      className="btn btn-danger"
-                      onClick={() => handleDelete(product._id)}
-                    >
-                      Delete
-                    </button>
-                  )}
                 </td>
               </tr>
             ))}

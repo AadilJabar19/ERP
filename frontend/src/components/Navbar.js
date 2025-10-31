@@ -44,7 +44,7 @@ const Navbar = () => {
           <span></span>
         </button>
         <nav className={`navbar ${isOpen ? 'navbar-open' : ''}`}>
-          <h2>Mini ERP</h2>
+          <h2>Claryx ERP</h2>
           <ul className="nav-links">
             <li><Link to="/login" onClick={() => setIsOpen(false)}>Login</Link></li>
           </ul>
@@ -62,7 +62,7 @@ const Navbar = () => {
         <span></span>
       </button>
       <nav className={`navbar ${isOpen ? 'navbar-open' : ''}`}>
-        <h2>Mini ERP</h2>
+        <h2>Claryx ERP</h2>
         <div className="user-info">
           <Link to="/profile-system" onClick={() => setIsOpen(false)} className="user-profile-link">
             <div className="user-avatar">

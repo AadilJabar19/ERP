@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const AdminPanel = () => {
   const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [activeTab, setActiveTab] = useState('overview');
   const [users, setUsers] = useState([]);
   const [systemStats, setSystemStats] = useState({});
@@ -286,17 +291,59 @@ const AdminPanel = () => {
     </div>
   );
 
+  const handleBulkDelete = () => {
+    if (selectedItems.length === 0) return;
+    showConfirm(
+      'Delete Users',
+      `Delete ${selectedItems.length} user(s)?`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await Promise.all(selectedItems.map(id => 
+            axios.delete(`http://localhost:5000/api/admin/users/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ));
+          success(`Deleted ${selectedItems.length} user(s)`);
+          clearSelection();
+          fetchData();
+        } catch (err) {
+          error('Error deleting users');
+        }
+      }
+    );
+  };
+
   const renderUsers = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>👥 User Management</h3>
-        <button className="btn btn-primary" onClick={() => {
-          setEditingUser(null);
-          resetForm();
-          setShowModal(true);
-        }}>
-          ➕ Add User
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="btn btn-primary" onClick={() => {
+            setEditingUser(null);
+            resetForm();
+            setShowModal(true);
+          }}>
+            ➕ Add User
+          </button>
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: handleBulkDelete,
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (
@@ -304,6 +351,13 @@ const AdminPanel = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, users)}
+                  />
+                </th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
@@ -316,6 +370,13 @@ const AdminPanel = () => {
             <tbody>
               {users.map(user => (
                 <tr key={user._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(user._id)}
+                      onChange={(e) => handleSelectItem(e, user._id)}
+                    />
+                  </td>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
                   <td>
@@ -380,13 +441,42 @@ const AdminPanel = () => {
 
   const renderAuditLogs = () => (
     <div className="card">
-      <h3>📋 Audit Logs</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3>📋 Audit Logs</h3>
+        {selectedItems.length > 0 && (
+          <ActionDropdown
+            actions={[
+              {
+                label: `Export (${selectedItems.length})`,
+                icon: '📥',
+                onClick: () => {
+                  success(`Exporting ${selectedItems.length} log(s)`);
+                  clearSelection();
+                },
+                className: 'primary'
+              },
+              {
+                label: 'Clear Selection',
+                icon: '✖️',
+                onClick: clearSelection
+              }
+            ]}
+          />
+        )}
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, auditLogs)}
+                  />
+                </th>
                 <th>Timestamp</th>
                 <th>User</th>
                 <th>Action</th>
@@ -398,6 +488,13 @@ const AdminPanel = () => {
             <tbody>
               {auditLogs.map(log => (
                 <tr key={log._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(log._id)}
+                      onChange={(e) => handleSelectItem(e, log._id)}
+                    />
+                  </td>
                   <td>{new Date(log.timestamp).toLocaleString()}</td>
                   <td>{log.user?.name || 'System'}</td>
                   <td>{log.action}</td>
@@ -427,9 +524,46 @@ const AdminPanel = () => {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>💾 Database Backups</h3>
-        <button className="btn btn-success" onClick={handleBackup}>
-          🔄 Create Backup
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="btn btn-success" onClick={handleBackup}>
+            🔄 Create Backup
+          </button>
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Download (${selectedItems.length})`,
+                  icon: '📥',
+                  onClick: () => {
+                    success(`Downloading ${selectedItems.length} backup(s)`);
+                    clearSelection();
+                  },
+                  className: 'primary'
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: () => {
+                    showConfirm(
+                      'Delete Backups',
+                      `Delete ${selectedItems.length} backup(s)?`,
+                      () => {
+                        success(`Deleted ${selectedItems.length} backup(s)`);
+                        clearSelection();
+                      }
+                    );
+                  },
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (
@@ -437,6 +571,13 @@ const AdminPanel = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, backups)}
+                  />
+                </th>
                 <th>Backup Name</th>
                 <th>Created Date</th>
                 <th>Size</th>
@@ -448,6 +589,13 @@ const AdminPanel = () => {
             <tbody>
               {backups.map(backup => (
                 <tr key={backup._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(backup._id)}
+                      onChange={(e) => handleSelectItem(e, backup._id)}
+                    />
+                  </td>
                   <td>{backup.name}</td>
                   <td>{new Date(backup.createdAt).toLocaleString()}</td>
                   <td>{backup.size}</td>

@@ -39,7 +39,7 @@ app.use(session({
 }));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mini-erp', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/claryx-erp', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -104,6 +104,14 @@ const optionalRoutes = [
   { path: '/api/automation', file: './routes/automation' }
 ];
 
+// Health check route (no auth required)
+try {
+  app.use('/api/health', require('./routes/health'));
+  console.log('✓ Loaded /api/health');
+} catch (error) {
+  console.error('Error loading health route:', error);
+}
+
 // Load core routes
 routes.forEach(route => {
   try {
@@ -129,7 +137,7 @@ optionalRoutes.forEach(route => {
 console.log('Route loading completed');
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Mini ERP API is running!' });
+  res.json({ message: 'Claryx ERP API is running!' });
 });
 
 // Global error handler

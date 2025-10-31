@@ -5,7 +5,7 @@ require('dotenv').config();
 
 const seedActivities = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mini-erp');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/claryx-erp');
     
     const users = await User.find();
     

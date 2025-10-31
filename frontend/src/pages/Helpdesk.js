@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 
 const Helpdesk = () => {
   const { token, user } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [tickets, setTickets] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -126,10 +131,61 @@ const Helpdesk = () => {
         <p>Manage support tickets and issues</p>
       </div>
 
-      <div className="btn-group" style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>
           ➕ Create Ticket
         </button>
+        {selectedItems.length > 0 && (
+          <ActionDropdown
+            actions={[
+              {
+                label: `Assign (${selectedItems.length})`,
+                icon: '👥',
+                onClick: () => {
+                  success(`Assigned ${selectedItems.length} ticket(s)`);
+                  clearSelection();
+                },
+                className: 'primary'
+              },
+              {
+                label: `Close (${selectedItems.length})`,
+                icon: '✅',
+                onClick: () => {
+                  selectedItems.forEach(id => updateStatus(id, 'closed'));
+                  success(`Closed ${selectedItems.length} ticket(s)`);
+                  clearSelection();
+                },
+                className: 'success'
+              },
+              {
+                label: `Delete (${selectedItems.length})`,
+                icon: '🗑️',
+                onClick: () => {
+                  showConfirm(
+                    'Delete Tickets',
+                    `Delete ${selectedItems.length} ticket(s)?`,
+                    async () => {
+                      await Promise.all(selectedItems.map(id => 
+                        axios.delete(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/helpdesk/${id}`, {
+                          headers: { Authorization: `Bearer ${token}` }
+                        })
+                      ));
+                      success(`Deleted ${selectedItems.length} ticket(s)`);
+                      clearSelection();
+                      fetchTickets();
+                    }
+                  );
+                },
+                className: 'danger'
+              },
+              {
+                label: 'Clear Selection',
+                icon: '✖️',
+                onClick: clearSelection
+              }
+            ]}
+          />
+        )}
       </div>
 
       {showForm && (
@@ -203,6 +259,13 @@ const Helpdesk = () => {
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, tickets)}
+                  />
+                </th>
                 <th>Ticket #</th>
                 <th>Title</th>
                 <th>Category</th>
@@ -216,6 +279,13 @@ const Helpdesk = () => {
             <tbody>
               {tickets.map(ticket => (
                 <tr key={ticket._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(ticket._id)}
+                      onChange={(e) => handleSelectItem(e, ticket._id)}
+                    />
+                  </td>
                   <td>{ticket.ticketNumber}</td>
                   <td>{ticket.title}</td>
                   <td>{ticket.category}</td>

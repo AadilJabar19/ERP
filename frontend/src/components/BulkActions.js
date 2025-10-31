@@ -1,13 +1,13 @@
 import React from 'react';
 
 const BulkActions = ({ 
-  selectedItems, 
+  selectedItems = [], 
   onBulkDelete, 
   onBulkExport, 
   onBulkEdit,
   customActions = [] 
 }) => {
-  if (selectedItems.length === 0) return null;
+  if (!selectedItems || selectedItems.length === 0) return null;
 
   return (
     <div style={{ 
@@ -20,7 +20,7 @@ const BulkActions = ({
       marginBottom: '10px'
     }}>
       <span style={{ color: '#666', fontWeight: 'bold' }}>
-        {selectedItems.length} selected
+        {selectedItems?.length || 0} selected
       </span>
       
       {onBulkDelete && (

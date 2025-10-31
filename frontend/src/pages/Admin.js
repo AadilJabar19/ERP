@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 
 const Admin = () => {
   const { token, hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [users, setUsers] = useState([]);
   const [analytics, setAnalytics] = useState({});
   const [health, setHealth] = useState({});
   const [settings, setSettings] = useState({});
-  const [selectedUsers, setSelectedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -73,21 +77,22 @@ const Admin = () => {
   };
 
   const handleBulkAction = async (action, value = null) => {
-    if (selectedUsers.length === 0) {
-      alert('Please select users first');
+    if (selectedItems.length === 0) {
+      error('Please select users first');
       return;
     }
     
     try {
       await axios.post(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/admin/users/bulk-action`,
-        { userIds: selectedUsers, action, value },
+        { userIds: selectedItems, action, value },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setSelectedUsers([]);
+      success(`${action} applied to ${selectedItems.length} user(s)`);
+      clearSelection();
       fetchData();
-    } catch (error) {
-      alert('Error performing bulk action');
+    } catch (err) {
+      error('Error performing bulk action');
     }
   };
 
@@ -200,22 +205,41 @@ const Admin = () => {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2>User Management</h2>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                className="btn btn-success" 
-                onClick={() => handleBulkAction('activate')}
-                disabled={selectedUsers.length === 0}
-              >
-                Activate Selected
-              </button>
-              <button 
-                className="btn btn-danger" 
-                onClick={() => handleBulkAction('deactivate')}
-                disabled={selectedUsers.length === 0}
-              >
-                Deactivate Selected
-              </button>
-            </div>
+            {selectedItems.length > 0 && (
+              <ActionDropdown
+                actions={[
+                  {
+                    label: `Activate (${selectedItems.length})`,
+                    icon: '✅',
+                    onClick: () => handleBulkAction('activate'),
+                    className: 'success'
+                  },
+                  {
+                    label: `Deactivate (${selectedItems.length})`,
+                    icon: '❌',
+                    onClick: () => handleBulkAction('deactivate'),
+                    className: 'danger'
+                  },
+                  {
+                    label: `Delete (${selectedItems.length})`,
+                    icon: '🗑️',
+                    onClick: () => {
+                      showConfirm(
+                        'Delete Users',
+                        `Delete ${selectedItems.length} user(s)?`,
+                        () => handleBulkAction('delete')
+                      );
+                    },
+                    className: 'danger'
+                  },
+                  {
+                    label: 'Clear Selection',
+                    icon: '✖️',
+                    onClick: clearSelection
+                  }
+                ]}
+              />
+            )}
           </div>
           
           <div className="table-container">
@@ -225,13 +249,8 @@ const Admin = () => {
                   <th>
                     <input
                       type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedUsers(users.map(u => u._id));
-                        } else {
-                          setSelectedUsers([]);
-                        }
-                      }}
+                      checked={selectAll}
+                      onChange={(e) => handleSelectAll(e, users)}
                     />
                   </th>
                   <th>Name</th>
@@ -248,14 +267,8 @@ const Admin = () => {
                     <td>
                       <input
                         type="checkbox"
-                        checked={selectedUsers.includes(user._id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedUsers([...selectedUsers, user._id]);
-                          } else {
-                            setSelectedUsers(selectedUsers.filter(id => id !== user._id));
-                          }
-                        }}
+                        checked={selectedItems.includes(user._id)}
+                        onChange={(e) => handleSelectItem(e, user._id)}
                       />
                     </td>
                     <td>{user.name}</td>

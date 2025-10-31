@@ -7,6 +7,7 @@ import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
+import ActionDropdown from '../components/ActionDropdown';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -26,6 +27,7 @@ const HRM = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
+  const [showConvertEmployeeModal, setShowConvertEmployeeModal] = useState(false);
   const [showPerformanceModal, setShowPerformanceModal] = useState(false);
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -37,7 +39,8 @@ const HRM = () => {
   const [analytics, setAnalytics] = useState({});
   const [showCSVModal, setShowCSVModal] = useState(false);
   const [convertData, setConvertData] = useState({ employeeId: '', department: '', position: '', baseSalary: '' });
-  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
+  const [convertEmployeeData, setConvertEmployeeData] = useState({ password: '', role: 'employee' });
+  const { selectedItems = [], selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [formData, setFormData] = useState({
     // Employee form
     employeeId: '', 
@@ -213,6 +216,24 @@ const HRM = () => {
     }
   };
 
+  const handleConvertToUser = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/hrm/employees/${selectedEmployee._id}/convert-to-user`, 
+        convertEmployeeData,
+        { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+      );
+      setShowConvertEmployeeModal(false);
+      setConvertEmployeeData({ password: '', role: 'employee' });
+      setSelectedEmployee(null);
+      fetchData();
+      success('Employee converted to ERP user successfully!');
+    } catch (err) {
+      error('Error: ' + (err.response?.data?.message || 'Failed to convert employee'));
+    }
+  };
+
   const handleEditEmployee = (employee) => {
     setEditingEmployee(employee);
     setFormData({
@@ -354,7 +375,8 @@ const HRM = () => {
           break;
       }
     } catch (error) {
-      // Handle error silently
+      console.error('Error fetching data:', error);
+      error('Failed to load data: ' + (error.response?.data?.message || 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -362,8 +384,8 @@ const HRM = () => {
 
   const renderEmployees = () => (
     <div className="card">
-      <h3>Employee Management</h3>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Employee Management</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {hasRole(['admin', 'manager']) && (
             <button className="btn btn-primary" onClick={() => {
@@ -381,13 +403,40 @@ const HRM = () => {
               Add Employee
             </button>
           )}
-          <BulkActions 
-            selectedItems={selectedItems}
-            onBulkDelete={handleBulkDelete}
-          />
           <button className="btn btn-info" onClick={() => setShowCSVModal(true)}>
             📤 Import CSV
           </button>
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Edit (${selectedItems.length})`,
+                  icon: '✏️',
+                  onClick: () => {
+                    if (selectedItems.length === 1) {
+                      const emp = employees.find(e => e._id === selectedItems[0]);
+                      handleEditEmployee(emp);
+                    } else {
+                      error('Please select only one item to edit');
+                    }
+                  },
+                  className: 'primary',
+                  disabled: selectedItems.length !== 1
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: handleBulkDelete,
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
         </div>
       </div>
       
@@ -405,7 +454,7 @@ const HRM = () => {
                   <input 
                     type="checkbox" 
                     checked={selectAll}
-                    onChange={(e) => handleSelectAll(e.target.checked, employees)}
+                    onChange={(e) => handleSelectAll(e, employees)}
                   />
                 </th>
                 <th>Employee ID</th>
@@ -415,7 +464,7 @@ const HRM = () => {
                 <th>Employment Type</th>
                 <th>Hire Date</th>
                 <th>Status</th>
-                <th>Actions</th>
+                <th>User Status</th>
               </tr>
             </thead>
             <tbody>
@@ -428,7 +477,7 @@ const HRM = () => {
                     <input 
                       type="checkbox" 
                       checked={selectedItems.includes(employee._id)}
-                      onChange={(e) => handleSelectItem(employee._id, e.target.checked)}
+                      onChange={(e) => handleSelectItem(e, employee._id)}
                     />
                   </td>
                   <td>{employee.employeeId}</td>
@@ -455,25 +504,13 @@ const HRM = () => {
                     </span>
                   </td>
                   <td>
-                    {hasRole(['admin', 'manager']) && (
-                      <>
-                        <button 
-                          className="btn btn-sm btn-primary" 
-                          style={{ marginRight: '5px' }}
-                          onClick={() => handleEditEmployee(employee)}
-                        >
-                          Edit
-                        </button>
-                        {hasRole(['admin']) && (
-                          <button 
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleDeleteEmployee(employee._id, employee.fullName)}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </>
-                    )}
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                      backgroundColor: employee.userId ? '#28a745' : '#6c757d',
+                      color: 'white'
+                    }}>
+                      {employee.userId ? 'Has ERP Access' : 'No ERP Access'}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -486,16 +523,56 @@ const HRM = () => {
 
   const renderLeaves = () => (
     <div className="card">
-      <h3>Leave Management</h3>
-      <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-        Apply Leave
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Leave Management</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            Apply Leave
+          </button>
+          {selectedItems.length > 0 && hasRole(['admin', 'manager']) && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Approve (${selectedItems.length})`,
+                  icon: '✅',
+                  onClick: () => {
+                    selectedItems.forEach(id => handleApproveLeave(id, true));
+                    clearSelection();
+                  },
+                  className: 'success'
+                },
+                {
+                  label: `Reject (${selectedItems.length})`,
+                  icon: '❌',
+                  onClick: () => {
+                    selectedItems.forEach(id => handleApproveLeave(id, false));
+                    clearSelection();
+                  },
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, leaves)}
+                  />
+                </th>
                 <th>Employee</th>
                 <th>Leave Type</th>
                 <th>Start Date</th>
@@ -503,12 +580,18 @@ const HRM = () => {
                 <th>Days</th>
                 <th>Status</th>
                 <th>Applied Date</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {leaves.map(leave => (
                 <tr key={leave._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(leave._id)}
+                      onChange={(e) => handleSelectItem(e, leave._id)}
+                    />
+                  </td>
                   <td>{leave.employee?.personalInfo?.firstName} {leave.employee?.personalInfo?.lastName}</td>
                   <td>
                     <span style={{
@@ -532,25 +615,6 @@ const HRM = () => {
                     </span>
                   </td>
                   <td>{new Date(leave.appliedDate).toLocaleDateString()}</td>
-                  <td>
-                    {hasRole(['admin', 'manager']) && leave.status === 'pending' && (
-                      <>
-                        <button 
-                          className="btn btn-sm btn-success" 
-                          style={{ marginRight: '5px' }}
-                          onClick={() => handleApproveLeave(leave._id, true)}
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleApproveLeave(leave._id, false)}
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -562,18 +626,49 @@ const HRM = () => {
 
   const renderTraining = () => (
     <div className="card">
-      <h3>Training & Development</h3>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          Create Training
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Training & Development</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              Create Training
+            </button>
+          )}
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Enroll (${selectedItems.length})`,
+                  icon: '🎓',
+                  onClick: () => {
+                    success(`Enrolled in ${selectedItems.length} training(s)`);
+                    clearSelection();
+                  },
+                  className: 'primary'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, trainings)}
+                  />
+                </th>
                 <th>Training Title</th>
                 <th>Category</th>
                 <th>Type</th>
@@ -581,12 +676,18 @@ const HRM = () => {
                 <th>Start Date</th>
                 <th>Participants</th>
                 <th>Status</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {trainings.map(training => (
                 <tr key={training._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(training._id)}
+                      onChange={(e) => handleSelectItem(e, training._id)}
+                    />
+                  </td>
                   <td>{training.title}</td>
                   <td>
                     <span style={{
@@ -608,9 +709,6 @@ const HRM = () => {
                     }}>
                       {training.status}
                     </span>
-                  </td>
-                  <td>
-                    <button className="btn btn-sm btn-primary" onClick={() => success(`Enrolled in: ${training.title}`)}>Enroll</button>
                   </td>
                 </tr>
               ))}
@@ -771,21 +869,52 @@ const HRM = () => {
 
   const renderPerformance = () => (
     <div className="card">
-      <h3>Performance Reviews</h3>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => {
-          setShowPerformanceModal(true);
-          setFormData({...formData, reviewType: 'annual', overallRating: 5, reviewPeriod: { startDate: '', endDate: '' }});
-        }}>
-          Create Performance Review
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Performance Reviews</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => {
+              setShowPerformanceModal(true);
+              setFormData({...formData, reviewType: 'annual', overallRating: 5, reviewPeriod: { startDate: '', endDate: '' }});
+            }}>
+              Create Performance Review
+            </button>
+          )}
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `View (${selectedItems.length})`,
+                  icon: '👁️',
+                  onClick: () => {
+                    success(`Viewing ${selectedItems.length} review(s)`);
+                    clearSelection();
+                  },
+                  className: 'primary'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, performances)}
+                  />
+                </th>
                 <th>Employee</th>
                 <th>Review Type</th>
                 <th>Period</th>
@@ -793,12 +922,18 @@ const HRM = () => {
                 <th>Status</th>
                 <th>Reviewer</th>
                 <th>Date</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {(performances || []).map(perf => (
                 <tr key={perf._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(perf._id)}
+                      onChange={(e) => handleSelectItem(e, perf._id)}
+                    />
+                  </td>
                   <td>{perf.employee?.personalInfo?.firstName} {perf.employee?.personalInfo?.lastName}</td>
                   <td>
                     <span style={{
@@ -829,9 +964,6 @@ const HRM = () => {
                   </td>
                   <td>{perf.reviewer?.personalInfo?.firstName} {perf.reviewer?.personalInfo?.lastName}</td>
                   <td>{new Date(perf.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <button className="btn btn-sm btn-primary" onClick={() => success(`Viewing performance review for ${perf.employee?.personalInfo?.firstName}`)}>View Details</button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -843,21 +975,52 @@ const HRM = () => {
 
   const renderPayroll = () => (
     <div className="card">
-      <h3>Payroll Management</h3>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => {
-          setShowPayrollModal(true);
-          setFormData({...formData, baseSalary: '', overtime: 0, bonuses: 0, deductions: 0, payPeriod: { startDate: '', endDate: '' }});
-        }}>
-          Process Payroll
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Payroll Management</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => {
+              setShowPayrollModal(true);
+              setFormData({...formData, baseSalary: '', overtime: 0, bonuses: 0, deductions: 0, payPeriod: { startDate: '', endDate: '' }});
+            }}>
+              Process Payroll
+            </button>
+          )}
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Download PDF (${selectedItems.length})`,
+                  icon: '📥',
+                  onClick: () => {
+                    success(`Downloading ${selectedItems.length} payslip(s)`);
+                    clearSelection();
+                  },
+                  className: 'primary'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, payrolls)}
+                  />
+                </th>
                 <th>Employee</th>
                 <th>Pay Period</th>
                 <th>Base Salary</th>
@@ -866,12 +1029,18 @@ const HRM = () => {
                 <th>Deductions</th>
                 <th>Net Pay</th>
                 <th>Status</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {(payrolls || []).map(payroll => (
                 <tr key={payroll._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(payroll._id)}
+                      onChange={(e) => handleSelectItem(e, payroll._id)}
+                    />
+                  </td>
                   <td>{payroll.employee?.personalInfo?.firstName} {payroll.employee?.personalInfo?.lastName}</td>
                   <td>{payroll.payPeriod?.startDate ? new Date(payroll.payPeriod.startDate).toLocaleDateString() : 'N/A'} - {payroll.payPeriod?.endDate ? new Date(payroll.payPeriod.endDate).toLocaleDateString() : 'N/A'}</td>
                   <td>${payroll.earnings?.baseSalary?.toLocaleString()}</td>
@@ -890,9 +1059,6 @@ const HRM = () => {
                       {payroll.status}
                     </span>
                   </td>
-                  <td>
-                    <button className="btn btn-sm btn-primary" onClick={() => success(`Viewing payroll slip for ${payroll.employee?.personalInfo?.firstName}`)}>View Slip</button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -904,30 +1070,98 @@ const HRM = () => {
 
   const renderDepartments = () => (
     <div className="card">
-      <h3>Department Management</h3>
-      {hasRole(['admin']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          Add Department
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Department Management</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin']) && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              Add Department
+            </button>
+          )}
+          {selectedItems.length > 0 && hasRole(['admin']) && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Edit (${selectedItems.length})`,
+                  icon: '✏️',
+                  onClick: () => {
+                    if (selectedItems.length === 1) {
+                      success(`Editing department`);
+                    } else {
+                      error('Please select only one department to edit');
+                    }
+                  },
+                  className: 'primary',
+                  disabled: selectedItems.length !== 1
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: () => {
+                    showConfirm(
+                      'Delete Departments',
+                      `Are you sure you want to delete ${selectedItems.length} department(s)?`,
+                      async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          await Promise.all(selectedItems.map(id => 
+                            axios.delete(`http://localhost:5000/api/hrm/departments/${id}`, {
+                              headers: { Authorization: `Bearer ${token}` },
+                              withCredentials: true
+                            })
+                          ));
+                          success('Departments deleted successfully');
+                          clearSelection();
+                          fetchData();
+                        } catch (err) {
+                          error('Error deleting departments: ' + (err.response?.data?.message || 'Failed to delete departments'));
+                        }
+                      }
+                    );
+                  },
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, departments)}
+                  />
+                </th>
                 <th>Department Name</th>
                 <th>Code</th>
                 <th>Manager</th>
                 <th>Employees</th>
                 <th>Budget</th>
                 <th>Status</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {departments.map(dept => (
                 <tr key={dept._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(dept._id)}
+                      onChange={(e) => handleSelectItem(e, dept._id)}
+                    />
+                  </td>
                   <td>{dept.name}</td>
                   <td>{dept.code}</td>
                   <td>{dept.manager?.personalInfo?.firstName} {dept.manager?.personalInfo?.lastName}</td>
@@ -942,23 +1176,6 @@ const HRM = () => {
                       {dept.status}
                     </span>
                   </td>
-                  <td>
-                    {hasRole(['admin']) && (
-                      <>
-                        <button className="btn btn-sm btn-primary" style={{ marginRight: '5px' }} onClick={() => success(`Editing department: ${dept.name}`)}>Edit</button>
-                        <button 
-                          className="btn btn-sm btn-danger" 
-                          onClick={() => showConfirm(
-                            'Delete Department',
-                            `Are you sure you want to delete the ${dept.name} department? This action cannot be undone.`,
-                            () => success('Department deleted successfully')
-                          )}
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -970,26 +1187,69 @@ const HRM = () => {
 
   const renderUsers = () => (
     <div className="card">
-      <h3>ERP Users</h3>
-      <p style={{ color: '#666', marginBottom: '20px' }}>Manage ERP system users and convert them to employees</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>ERP Users</h3>
+          <p style={{ color: '#666', margin: '5px 0 0 0' }}>Manage ERP system users and convert them to employees</p>
+        </div>
+        {selectedItems.length > 0 && (
+          <ActionDropdown
+            actions={[
+              {
+                label: `Convert to Employee (${selectedItems.length})`,
+                icon: '👥',
+                onClick: () => {
+                  if (selectedItems.length === 1) {
+                    const user = users.find(u => u._id === selectedItems[0]);
+                    setSelectedUser(user);
+                    setShowConvertModal(true);
+                  } else {
+                    error('Please select only one user to convert');
+                  }
+                },
+                className: 'success',
+                disabled: selectedItems.length !== 1
+              },
+              {
+                label: 'Clear Selection',
+                icon: '✖️',
+                onClick: clearSelection
+              }
+            ]}
+          />
+        )}
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, users)}
+                  />
+                </th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th>Last Login</th>
                 <th>Created</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map(user => (
                 <tr key={user._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(user._id)}
+                      onChange={(e) => handleSelectItem(e, user._id)}
+                    />
+                  </td>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
                   <td>
@@ -1012,17 +1272,6 @@ const HRM = () => {
                   </td>
                   <td>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</td>
                   <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <button 
-                      className="btn btn-sm btn-success"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowConvertModal(true);
-                      }}
-                    >
-                      Convert to Employee
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1429,6 +1678,40 @@ const HRM = () => {
           </div>
           <button type="submit" className="btn btn-success">
             Convert to Employee
+          </button>
+        </form>
+      </Modal>
+      
+      <Modal isOpen={showConvertEmployeeModal} onClose={() => setShowConvertEmployeeModal(false)} title="Convert Employee to ERP User">
+        <form onSubmit={handleConvertToUser}>
+          {selectedEmployee && (
+            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+              <strong>Converting Employee:</strong> {selectedEmployee.fullName} ({selectedEmployee.contactInfo?.email})
+            </div>
+          )}
+          <div className="form-group">
+            <label>{"Password:"}:</label>
+            <input 
+              type="password" 
+              value={convertEmployeeData.password} 
+              onChange={(e) => setConvertEmployeeData({...convertEmployeeData, password: e.target.value})} 
+              required 
+              minLength="6"
+              placeholder="Enter password for ERP access"
+            />
+          </div>
+          <div className="form-group">
+            <label>{"Role:"}:</label>
+            <select 
+              value={convertEmployeeData.role} 
+              onChange={(e) => setConvertEmployeeData({...convertEmployeeData, role: e.target.value})}
+            >
+              <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
+            </select>
+          </div>
+          <button type="submit" className="btn btn-success">
+            Convert to ERP User
           </button>
         </form>
       </Modal>

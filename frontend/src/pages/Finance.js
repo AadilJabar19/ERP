@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
+import ActionDropdown from '../components/ActionDropdown';
+import useBulkActions from '../hooks/useBulkActions';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Finance = () => {
   const { hasRole } = useAuth();
+  const { success, error, showConfirm } = useToast();
+  const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [activeTab, setActiveTab] = useState('accounts');
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -96,14 +101,72 @@ const Finance = () => {
     }
   };
 
+  const handleBulkDelete = (type) => {
+    if (selectedItems.length === 0) return;
+    showConfirm(
+      `Delete ${type}`,
+      `Are you sure you want to delete ${selectedItems.length} selected ${type.toLowerCase()}(s)?`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const endpoint = type === 'Accounts' ? 'accounts' : type === 'Transactions' ? 'transactions' : 'budgets';
+          await Promise.all(selectedItems.map(id => 
+            axios.delete(`http://localhost:5000/api/finance/${endpoint}/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ));
+          success(`${selectedItems.length} ${type.toLowerCase()}(s) deleted successfully`);
+          clearSelection();
+          fetchData();
+        } catch (err) {
+          error(`Error deleting ${type.toLowerCase()}s`);
+        }
+      }
+    );
+  };
+
   const renderAccounts = () => (
     <div className="card">
-      <h3>Chart of Accounts</h3>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          Add Account
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Chart of Accounts</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              Add Account
+            </button>
+          )}
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Edit (${selectedItems.length})`,
+                  icon: '✏️',
+                  onClick: () => {
+                    if (selectedItems.length === 1) {
+                      success('Edit account functionality');
+                    } else {
+                      error('Please select only one account to edit');
+                    }
+                  },
+                  className: 'primary',
+                  disabled: selectedItems.length !== 1
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: () => handleBulkDelete('Accounts'),
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <>
@@ -111,6 +174,13 @@ const Finance = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <th>
+                    <input 
+                      type="checkbox" 
+                      checked={selectAll}
+                      onChange={(e) => handleSelectAll(e, accounts)}
+                    />
+                  </th>
                   <th>Account Code</th>
                   <th>Account Name</th>
                   <th>Type</th>
@@ -121,6 +191,13 @@ const Finance = () => {
               <tbody>
                 {accounts.map(account => (
                   <tr key={account._id}>
+                    <td>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedItems.includes(account._id)}
+                        onChange={(e) => handleSelectItem(e, account._id)}
+                      />
+                    </td>
                     <td>{account.accountCode}</td>
                     <td>{account.accountName}</td>
                     <td>
@@ -158,12 +235,42 @@ const Finance = () => {
 
   const renderTransactions = () => (
     <div className="card">
-      <h3>Journal Entries</h3>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          Add Transaction
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Journal Entries</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              Add Transaction
+            </button>
+          )}
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Post (${selectedItems.length})`,
+                  icon: '✅',
+                  onClick: () => {
+                    success(`Posted ${selectedItems.length} transaction(s)`);
+                    clearSelection();
+                  },
+                  className: 'success'
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: () => handleBulkDelete('Transactions'),
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <>
@@ -171,6 +278,13 @@ const Finance = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <th>
+                    <input 
+                      type="checkbox" 
+                      checked={selectAll}
+                      onChange={(e) => handleSelectAll(e, transactions)}
+                    />
+                  </th>
                   <th>Transaction #</th>
                   <th>Date</th>
                   <th>Description</th>
@@ -182,6 +296,13 @@ const Finance = () => {
               <tbody>
                 {transactions.map(transaction => (
                   <tr key={transaction._id}>
+                    <td>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedItems.includes(transaction._id)}
+                        onChange={(e) => handleSelectItem(e, transaction._id)}
+                      />
+                    </td>
                     <td>{transaction.transactionNumber}</td>
                     <td>{new Date(transaction.date).toLocaleDateString()}</td>
                     <td>{transaction.description}</td>
@@ -213,12 +334,42 @@ const Finance = () => {
 
   const renderBudgets = () => (
     <div className="card">
-      <h3>Budget Management</h3>
-      {hasRole(['admin', 'manager']) && (
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          Create Budget
-        </button>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>Budget Management</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {hasRole(['admin', 'manager']) && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              Create Budget
+            </button>
+          )}
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Approve (${selectedItems.length})`,
+                  icon: '✅',
+                  onClick: () => {
+                    success(`Approved ${selectedItems.length} budget(s)`);
+                    clearSelection();
+                  },
+                  className: 'success'
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: () => handleBulkDelete('Budgets'),
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+        </div>
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <>
@@ -226,6 +377,13 @@ const Finance = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <th>
+                    <input 
+                      type="checkbox" 
+                      checked={selectAll}
+                      onChange={(e) => handleSelectAll(e, budgets)}
+                    />
+                  </th>
                   <th>Budget Name</th>
                   <th>Year</th>
                   <th>Department</th>
@@ -238,6 +396,13 @@ const Finance = () => {
               <tbody>
                 {budgets.map(budget => (
                   <tr key={budget._id}>
+                    <td>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedItems.includes(budget._id)}
+                        onChange={(e) => handleSelectItem(e, budget._id)}
+                      />
+                    </td>
                     <td>{budget.name}</td>
                     <td>{budget.year}</td>
                     <td>{budget.department || 'All'}</td>
