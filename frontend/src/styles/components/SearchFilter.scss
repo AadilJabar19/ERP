@@ -1,0 +1,64 @@
+@import '../variables';
+@import '../mixins';
+
+.search-filter-container {
+  display: flex;
+  gap: $spacing-3;
+  margin-bottom: $spacing-5;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+  max-width: 400px;
+  
+  .search-icon {
+    position: absolute;
+    left: $spacing-3;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $gray-500;
+    pointer-events: none;
+    font-size: $font-md;
+  }
+}
+
+.search-input {
+  @include input-base;
+  padding-left: $spacing-10;
+}
+
+.filter-select {
+  @include input-base;
+  width: auto;
+  min-width: 180px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right $spacing-3 center;
+  padding-right: $spacing-10;
+  
+  &:hover {
+    border-color: $gray-400;
+  }
+}
+
+// Responsive design
+@include respond-below($breakpoint-md) {
+  .search-filter-container {
+    @include flex-column;
+    align-items: stretch;
+  }
+  
+  .search-input-wrapper {
+    max-width: 100%;
+  }
+  
+  .filter-select {
+    width: 100%;
+  }
+}

@@ -1,0 +1,146 @@
+@import '../variables';
+@import '../mixins';
+
+.csv-upload-content {
+  padding: $spacing-6;
+}
+
+.csv-upload-description {
+  margin-bottom: $spacing-6;
+  
+  .description-text {
+    color: $gray-600;
+    margin-bottom: $spacing-4;
+    line-height: $line-height-normal;
+  }
+  
+  .instructions {
+    h4 {
+      margin: 0 0 $spacing-3;
+      font-size: $font-md;
+      color: $gray-900;
+    }
+    
+    ol {
+      padding-left: $spacing-6;
+      margin: 0;
+      
+      li {
+        margin-bottom: $spacing-2;
+        color: $gray-700;
+        line-height: $line-height-normal;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+}
+
+.template-section {
+  display: flex;
+  align-items: center;
+  gap: $spacing-4;
+  margin-bottom: $spacing-6;
+  padding: $spacing-4;
+  background: $background-light;
+  border-radius: $radius-lg;
+  flex-wrap: wrap;
+  
+  .required-fields {
+    color: $gray-600;
+    font-size: $font-xs;
+    line-height: $line-height-normal;
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+.file-upload-section {
+  margin-bottom: $spacing-6;
+  
+  .file-label {
+    display: block;
+    margin-bottom: $spacing-2;
+    font-weight: $font-weight-semibold;
+    font-size: $font-sm;
+    color: $gray-900;
+  }
+  
+  .file-input-wrapper {
+    position: relative;
+    
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+    
+    .file-input-label {
+      display: block;
+      width: 100%;
+      padding: $spacing-3 $spacing-4;
+      border: 2px dashed $border-color;
+      border-radius: $radius-lg;
+      background: $white;
+      cursor: pointer;
+      transition: all $transition-base;
+      text-align: center;
+      color: $gray-600;
+      font-size: $font-sm;
+      
+      &:hover {
+        border-color: $primary-500;
+        background: $background-light;
+        color: $primary-500;
+      }
+      
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+    
+    .file-input:focus + .file-input-label {
+      @include focus-ring;
+    }
+  }
+}
+
+.csv-upload-actions {
+  display: flex;
+  gap: $spacing-3;
+  justify-content: flex-end;
+  padding-top: $spacing-4;
+  border-top: 1px solid $gray-200;
+}
+
+// Responsive design
+@include respond-below($breakpoint-md) {
+  .csv-upload-content {
+    padding: $spacing-4;
+  }
+  
+  .template-section {
+    @include flex-column;
+    align-items: stretch;
+    
+    .required-fields {
+      min-width: 100%;
+    }
+  }
+  
+  .csv-upload-actions {
+    flex-direction: column-reverse;
+    
+    button {
+      width: 100%;
+    }
+  }
+}

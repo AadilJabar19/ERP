@@ -1,0 +1,39 @@
+// ============================================
+// MAIN STYLESHEET
+// ============================================
+// Import order matters! Variables and mixins first, then base styles, then components and pages.
+
+// 1. Variables & Mixins (Foundation)
+@import './variables';
+@import './mixins';
+
+// 2. Base Styles (Global)
+@import './base/App';
+
+// 3. Components (Reusable UI)
+// UI Components
+@import './components/Button';
+@import './components/Card';
+@import './components/Input';
+@import './components/Badge';
+@import './components/EmptyState';
+
+// Feature Components
+@import './components/SearchFilter';
+@import './components/Modal';
+@import './components/BulkActions';
+@import './components/CSVUpload';
+@import './components/ActionDropdown';
+@import './components/ConfirmModal';
+
+// 4. Pages (Page-specific)
+@import './pages/Dashboard';
+@import './pages/AttendanceSystem';
+@import './pages/HRM';
+
+// Add more page imports as needed:
+// @import './pages/InventoryManagement';
+// @import './pages/SalesManagement';
+// @import './pages/CalendarSystem';
+// @import './pages/FinanceManagement';
+// @import './pages/CRMSystem';

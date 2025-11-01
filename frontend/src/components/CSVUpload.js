@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
+import { Button } from './ui';
+import '../styles/components/CSVUpload.scss';
 
 const CSVUpload = ({ isOpen, onClose, onUpload, templateData, title, description }) => {
   const [file, setFile] = useState(null);
@@ -60,60 +62,65 @@ const CSVUpload = ({ isOpen, onClose, onUpload, templateData, title, description
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <p style={{ color: '#666', marginBottom: '15px' }}>{description}</p>
-          <h4>📋 Instructions:</h4>
-          <ol style={{ paddingLeft: '20px' }}>
-            <li>Download the CSV template</li>
-            <li>Fill in your data following the template format</li>
-            <li>Upload the completed CSV file</li>
-          </ol>
+      <div className="csv-upload-content">
+        <div className="csv-upload-description">
+          <p className="description-text">{description}</p>
+          <div className="instructions">
+            <h4>📋 Instructions:</h4>
+            <ol>
+              <li>Download the CSV template</li>
+              <li>Fill in your data following the template format</li>
+              <li>Upload the completed CSV file</li>
+            </ol>
+          </div>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <button 
-            className="btn btn-info" 
+        <div className="template-section">
+          <Button 
+            variant="info" 
             onClick={downloadTemplate}
-            style={{ marginRight: '10px' }}
+            icon="📥"
           >
-            📥 Download Template
-          </button>
-          <small style={{ color: '#666' }}>
-            {templateData && templateData.length > 0 && 
-              `Required fields: ${Object.keys(templateData[0]).join(', ')}`
-            }
-          </small>
+            Download Template
+          </Button>
+          {templateData && templateData.length > 0 && (
+            <small className="required-fields">
+              Required fields: {Object.keys(templateData[0]).join(', ')}
+            </small>
+          )}
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div className="file-upload-section">
+          <label className="file-label">
             Select CSV File:
           </label>
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleFileChange}
-            style={{ 
-              padding: '8px', 
-              border: '1px solid #ddd', 
-              borderRadius: '4px',
-              width: '100%'
-            }}
-          />
+          <div className="file-input-wrapper">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="file-input"
+              id="csv-file-input"
+            />
+            <label htmlFor="csv-file-input" className="file-input-label">
+              {file ? file.name : 'Choose a file...'}
+            </label>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button className="btn btn-secondary" onClick={onClose}>
+        <div className="csv-upload-actions">
+          <Button variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button 
-            className="btn btn-success" 
+          </Button>
+          <Button 
+            variant="success" 
             onClick={handleUpload}
             disabled={!file || uploading}
+            loading={uploading}
+            icon={uploading ? null : '📤'}
           >
-            {uploading ? '⏳ Uploading...' : '📤 Upload CSV'}
-          </button>
+            {uploading ? 'Uploading...' : 'Upload CSV'}
+          </Button>
         </div>
       </div>
     </Modal>

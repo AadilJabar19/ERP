@@ -39,7 +39,7 @@ import SystemConfig from './pages/SystemConfig';
 import Integrations from './pages/Integrations';
 import AIAssistantPage from './pages/AIAssistant';
 import AIAssistant from './components/AIAssistant';
-import './App.scss';
+import './styles/main.scss';
 
 function App() {
   useEffect(() => {

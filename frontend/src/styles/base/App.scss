@@ -1,5 +1,5 @@
-@import './styles/variables';
-@import './styles/mixins';
+@import '../variables';
+@import '../mixins';
 
 .App {
   min-height: 100vh;
@@ -248,27 +248,38 @@
 
 // Buttons
 .btn {
-  @include button($gray-color);
+  @include button-variant($gray-color, $white);
 
   &-primary {
-    @include button($primary-color);
+    @include button-variant($primary-color, $white, $primary-700);
   }
 
   &-success {
-    @include button($success-color);
+    @include button-variant($success-color, $white, $success-700);
   }
 
   &-danger {
-    @include button($danger-color);
+    @include button-variant($danger-color, $white, $danger-700);
   }
 
   &-secondary {
-    @include button($gray-color);
+    @include button-variant($gray-color, $white);
+  }
+  
+  &-warning {
+    @include button-variant($warning-color, $white, $warning-700);
+  }
+  
+  &-info {
+    @include button-variant($info-color, $white, $info-700);
   }
 
   &-sm {
-    padding: $spacing-xs $spacing-md;
-    font-size: 12px;
+    @include button-size('sm');
+  }
+  
+  &-lg {
+    @include button-size('lg');
   }
 }
 

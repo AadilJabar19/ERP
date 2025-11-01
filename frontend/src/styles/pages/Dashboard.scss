@@ -1,0 +1,144 @@
+@import '../variables';
+@import '../mixins';
+
+.page-container {
+  padding: $spacing-5;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: $spacing-6;
+  
+  .page-title {
+    @include heading('lg');
+  }
+}
+
+// Stats Grid
+.stats-grid {
+  @include grid-auto(250px, $spacing-5);
+  margin-bottom: $spacing-8;
+}
+
+.stat-card {
+  .stat-card-content {
+    @include flex-between;
+    gap: $spacing-4;
+  }
+  
+  .stat-icon {
+    font-size: $font-4xl;
+    color: $white;
+    padding: $spacing-4;
+    border-radius: $radius-full;
+    width: 60px;
+    height: 60px;
+    @include flex-center;
+    flex-shrink: 0;
+  }
+  
+  .stat-details {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .stat-title {
+    margin: 0 0 $spacing-1;
+    font-size: $font-sm;
+    color: $gray-600;
+    font-weight: $font-weight-medium;
+  }
+  
+  .stat-value {
+    margin: 0 0 $spacing-2;
+    font-size: $font-3xl;
+    font-weight: $font-weight-bold;
+    color: $gray-900;
+  }
+}
+
+// Charts Grid
+.charts-grid {
+  @include grid-auto(400px, $spacing-5);
+  margin-bottom: $spacing-8;
+}
+
+// Activity Card
+.activity-card {
+  .activity-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .activity-item {
+    @include flex-between;
+    padding: $spacing-3 0;
+    border-bottom: 1px solid $gray-200;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+  
+  .activity-content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-3;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .activity-description {
+    font-size: $font-sm;
+    color: $gray-900;
+    @include text-truncate;
+  }
+  
+  .activity-time {
+    font-size: $font-xs;
+    color: $gray-500;
+    white-space: nowrap;
+    margin-left: $spacing-4;
+  }
+}
+
+// Responsive Design
+@include respond-below($breakpoint-md) {
+  .page-container {
+    padding: $spacing-4;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: $spacing-4;
+  }
+  
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: $spacing-4;
+  }
+  
+  .stat-card {
+    .stat-icon {
+      width: 50px;
+      height: 50px;
+      font-size: $font-2xl;
+    }
+    
+    .stat-value {
+      font-size: $font-2xl;
+    }
+  }
+  
+  .activity-item {
+    @include flex-column;
+    align-items: flex-start;
+    gap: $spacing-2;
+  }
+  
+  .activity-time {
+    margin-left: 0;
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './ActionDropdown.scss';
+import '../styles/components/ActionDropdown.scss';
 
 const ActionDropdown = ({ actions }) => {
   const [isOpen, setIsOpen] = useState(false);

@@ -1,64 +1,81 @@
 import React from 'react';
+import { Button, Badge } from './ui';
+import '../styles/components/BulkActions.scss';
 
 const BulkActions = ({ 
-  selectedItems = [], 
+  selectedCount = 0,
+  selectedItems = [],
   onBulkDelete, 
   onBulkExport, 
   onBulkEdit,
+  onClearSelection,
   customActions = [] 
 }) => {
-  if (!selectedItems || selectedItems.length === 0) return null;
+  const count = selectedCount || selectedItems?.length || 0;
+  
+  if (count === 0) return null;
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      gap: '10px', 
-      alignItems: 'center',
-      padding: '10px',
-      backgroundColor: '#f8f9fa',
-      borderRadius: '4px',
-      marginBottom: '10px'
-    }}>
-      <span style={{ color: '#666', fontWeight: 'bold' }}>
-        {selectedItems?.length || 0} selected
-      </span>
+    <div className="bulk-actions">
+      <Badge variant="primary" size="md">
+        {count} selected
+      </Badge>
       
-      {onBulkDelete && (
-        <button 
-          className="btn btn-danger btn-sm" 
-          onClick={onBulkDelete}
+      {onBulkEdit && (
+        <Button 
+          variant="secondary"
+          size="sm"
+          onClick={onBulkEdit}
+          icon="✏️"
         >
-          Delete Selected
-        </button>
+          Edit
+        </Button>
       )}
       
       {onBulkExport && (
-        <button 
-          className="btn btn-success btn-sm" 
+        <Button 
+          variant="success"
+          size="sm"
           onClick={onBulkExport}
+          icon="📥"
         >
-          Export Selected
-        </button>
+          Export
+        </Button>
       )}
       
-      {onBulkEdit && (
-        <button 
-          className="btn btn-warning btn-sm" 
-          onClick={onBulkEdit}
+      {onBulkDelete && (
+        <Button 
+          variant="danger"
+          size="sm"
+          onClick={onBulkDelete}
+          icon="🗑️"
         >
-          Edit Selected
-        </button>
+          Delete
+        </Button>
       )}
       
       {customActions.map((action, index) => (
-        <button 
+        <Button 
           key={index}
-          className={`btn btn-${action.variant || 'secondary'} btn-sm`}
+          variant={action.variant || 'secondary'}
+          size="sm"
           onClick={action.onClick}
+          icon={action.icon}
         >
           {action.label}
-        </button>
+        </Button>
       ))}
+      
+      {onClearSelection && (
+        <Button 
+          variant="ghost"
+          size="sm"
+          onClick={onClearSelection}
+          icon="✖️"
+        >
+          Clear
+        </Button>
+      )}
     </div>
   );
 };

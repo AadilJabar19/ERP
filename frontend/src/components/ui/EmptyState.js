@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from './Button';
-import './EmptyState.scss';
+import '../../styles/components/EmptyState.scss';
 
 const EmptyState = ({ 
   icon = '📭',

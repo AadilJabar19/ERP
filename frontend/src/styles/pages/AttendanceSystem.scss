@@ -1,0 +1,83 @@
+@import '../variables';
+@import '../mixins';
+
+.attendance-filters {
+  margin-bottom: $spacing-6;
+  
+  .filter-row {
+    display: flex;
+    gap: $spacing-3;
+    align-items: center;
+    margin-bottom: $spacing-3;
+    flex-wrap: wrap;
+    
+    .search-filter-container {
+      flex: 1;
+      min-width: 250px;
+      margin-bottom: 0;
+    }
+  }
+  
+  .action-row {
+    display: flex;
+    gap: $spacing-3;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .date-filter,
+  .status-filter {
+    @include input-base;
+    min-width: 180px;
+    width: auto;
+    
+    &:hover {
+      border-color: $gray-400;
+    }
+  }
+  
+  .date-filter {
+    cursor: pointer;
+    
+    &::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+    }
+  }
+  
+  .status-filter {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right $spacing-3 center;
+    padding-right: $spacing-10;
+  }
+}
+
+// Responsive design
+@include respond-below($breakpoint-md) {
+  .attendance-filters {
+    .filter-row {
+      @include flex-column;
+      align-items: stretch;
+      
+      .search-filter-container {
+        min-width: 100%;
+      }
+      
+      .date-filter,
+      .status-filter {
+        width: 100%;
+      }
+    }
+    
+    .action-row {
+      @include flex-column;
+      align-items: stretch;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+}

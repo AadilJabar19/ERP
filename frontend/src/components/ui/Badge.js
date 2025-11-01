@@ -1,5 +1,5 @@
 import React from 'react';
-import './Badge.scss';
+import '../../styles/components/Badge.scss';
 
 const Badge = ({ 
   children, 

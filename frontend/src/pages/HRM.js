@@ -8,8 +8,10 @@ import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
 import ActionDropdown from '../components/ActionDropdown';
+import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import '../styles/pages/HRM.scss';
 
 const HRM = () => {
   const { hasRole, user } = useAuth();
@@ -388,7 +390,7 @@ const HRM = () => {
         <h3 style={{ margin: 0 }}>Employee Management</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {hasRole(['admin', 'manager']) && (
-            <button className="btn btn-primary" onClick={() => {
+            <Button variant="primary" onClick={() => {
               setEditingEmployee(null);
               setFormData({
                 employeeId: '', 
@@ -401,11 +403,11 @@ const HRM = () => {
               setShowModal(true);
             }}>
               Add Employee
-            </button>
+            </Button>
           )}
-          <button className="btn btn-info" onClick={() => setShowCSVModal(true)}>
-            📤 Import CSV
-          </button>
+          <Button variant="info" icon="📤" onClick={() => setShowCSVModal(true)}>
+            Import CSV
+          </Button>
           {selectedItems.length > 0 && (
             <ActionDropdown
               actions={[

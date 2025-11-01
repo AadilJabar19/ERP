@@ -3,7 +3,7 @@ import { useDashboardAnalytics } from '../hooks/useQueryHooks';
 import { Card, Badge, EmptyState } from '../components/ui';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
-import './Dashboard.scss';
+import '../styles/pages/Dashboard.scss';
 
 const StatCard = ({ icon, title, value, trend, color }) => (
   <Card hoverable className="stat-card">

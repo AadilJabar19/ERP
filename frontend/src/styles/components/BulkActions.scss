@@ -1,0 +1,31 @@
+@import '../variables';
+@import '../mixins';
+
+.bulk-actions {
+  display: flex;
+  gap: $spacing-2;
+  align-items: center;
+  padding: $spacing-3 $spacing-4;
+  background-color: $background-light;
+  border-radius: $radius-lg;
+  border: 1px solid $gray-300;
+  flex-wrap: wrap;
+  @include slide-up($transition-base);
+}
+
+// Responsive design
+@include respond-below($breakpoint-md) {
+  .bulk-actions {
+    @include flex-column;
+    align-items: stretch;
+    gap: $spacing-2;
+    
+    .badge {
+      text-align: center;
+    }
+    
+    button {
+      width: 100%;
+    }
+  }
+}

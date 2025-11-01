@@ -5,8 +5,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
+import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import '../styles/pages/AttendanceSystem.scss';
 
 const AttendanceSystem = () => {
   const { hasRole, user } = useAuth();
@@ -215,32 +217,50 @@ const AttendanceSystem = () => {
     <div className="card">
       <h3>📋 Attendance Records</h3>
       
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        {recordsBulk.selectedItems.length > 0 && (
-          <BulkActions
-            selectedCount={recordsBulk.selectedItems.length}
-            onBulkDelete={() => recordsBulk.handleBulkDelete('records', 'http://localhost:5000/api/attendance', fetchData)}
-            onClearSelection={recordsBulk.clearSelection}
+      <div className="attendance-filters">
+        <div className="filter-row">
+          <SearchFilter 
+            searchTerm={searchTerm} 
+            setSearchTerm={setSearchTerm}
+            placeholder="Search by employee name..."
           />
-        )}
-        <button className="btn btn-info" onClick={() => setShowCSVModal(true)}>
-          📤 Import CSV
-        </button>
-        <input 
-          type="date" 
-          value={dateFilter} 
-          onChange={(e) => setDateFilter(e.target.value)}
-          style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-        />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
-          <option value="">All Status</option>
-          <option value="present">Present</option>
-          <option value="absent">Absent</option>
-          <option value="late">Late</option>
-          <option value="on-time">On Time</option>
-        </select>
+          
+          <input 
+            type="date" 
+            value={dateFilter} 
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="date-filter"
+          />
+          
+          <select 
+            value={statusFilter} 
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="status-filter"
+          >
+            <option value="">All Status</option>
+            <option value="present">Present</option>
+            <option value="absent">Absent</option>
+            <option value="late">Late</option>
+            <option value="on-time">On Time</option>
+          </select>
+        </div>
+        
+        <div className="action-row">
+          {recordsBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={recordsBulk.selectedItems.length}
+              onBulkDelete={() => recordsBulk.handleBulkDelete('records', 'http://localhost:5000/api/attendance', fetchData)}
+              onClearSelection={recordsBulk.clearSelection}
+            />
+          )}
+          <Button 
+            variant="info" 
+            icon="📤" 
+            onClick={() => setShowCSVModal(true)}
+          >
+            Import CSV
+          </Button>
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (
