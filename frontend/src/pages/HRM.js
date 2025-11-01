@@ -8,6 +8,8 @@ import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
 import ActionDropdown from '../components/ActionDropdown';
+import ExportMenu from '../components/ExportMenu';
+import DateRangeFilter from '../components/DateRangeFilter';
 import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -38,6 +40,8 @@ const HRM = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [analytics, setAnalytics] = useState({});
   const [showCSVModal, setShowCSVModal] = useState(false);
   const [convertData, setConvertData] = useState({ employeeId: '', department: '', position: '', baseSalary: '' });
@@ -405,6 +409,15 @@ const HRM = () => {
               Add Employee
             </Button>
           )}
+          <ExportMenu 
+            data={employees.filter(emp => 
+              emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              emp.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
+            )}
+            filename="employees"
+            selectedItems={selectedItems}
+            allData={employees}
+          />
           <Button variant="info" icon="📤" onClick={() => setShowCSVModal(true)}>
             Import CSV
           </Button>
@@ -442,10 +455,20 @@ const HRM = () => {
         </div>
       </div>
       
-      <SearchFilter 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-      />
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <SearchFilter 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          placeholder="Search employees..."
+        />
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          label="Hire Date Range"
+        />
+      </div>
       
       {loading ? <LoadingSpinner /> : (
         <div className="table-container">

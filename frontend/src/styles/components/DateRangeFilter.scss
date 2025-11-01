@@ -1,0 +1,147 @@
+@import '../variables';
+@import '../mixins';
+
+.date-range-filter {
+  position: relative;
+  display: inline-block;
+}
+
+.date-range-toggle {
+  @include input-base;
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  cursor: pointer;
+  min-width: 200px;
+  background: $white;
+  transition: all $transition-base;
+
+  &:hover {
+    border-color: $primary-400;
+  }
+
+  &.active {
+    border-color: $primary-500;
+    background: $primary-50;
+  }
+
+  .date-icon {
+    font-size: $font-lg;
+  }
+
+  .date-label {
+    flex: 1;
+    text-align: left;
+    font-size: $font-sm;
+    color: $gray-700;
+  }
+
+  .arrow {
+    font-size: $font-xs;
+    transition: transform $transition-base;
+    color: $gray-500;
+
+    &.up {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.date-range-dropdown {
+  position: absolute;
+  top: calc(100% + $spacing-2);
+  left: 0;
+  background: $white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-xl;
+  padding: $spacing-4;
+  min-width: 320px;
+  z-index: $z-dropdown;
+  @include fade-in;
+  border: 1px solid $gray-200;
+}
+
+.date-range-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-3;
+  margin-bottom: $spacing-4;
+}
+
+.date-input-group {
+  label {
+    display: block;
+    font-size: $font-sm;
+    font-weight: $font-weight-medium;
+    color: $gray-700;
+    margin-bottom: $spacing-2;
+  }
+
+  input[type="date"] {
+    @include input-base;
+    width: 100%;
+    font-size: $font-sm;
+  }
+}
+
+.quick-select {
+  margin-bottom: $spacing-4;
+  padding-top: $spacing-4;
+  border-top: 1px solid $gray-200;
+
+  .quick-select-label {
+    font-size: $font-sm;
+    font-weight: $font-weight-medium;
+    color: $gray-700;
+    margin-bottom: $spacing-2;
+  }
+
+  .quick-select-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $spacing-2;
+
+    button {
+      padding: $spacing-2 $spacing-3;
+      border: 1px solid $gray-300;
+      background: $white;
+      border-radius: $radius-md;
+      font-size: $font-xs;
+      color: $gray-700;
+      cursor: pointer;
+      transition: all $transition-base;
+
+      &:hover {
+        background: $gray-50;
+        border-color: $primary-400;
+        color: $primary-600;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+  }
+}
+
+.date-range-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-2;
+  padding-top: $spacing-3;
+  border-top: 1px solid $gray-200;
+}
+
+@include respond-below($breakpoint-md) {
+  .date-range-toggle {
+    min-width: 160px;
+  }
+
+  .date-range-dropdown {
+    min-width: 280px;
+  }
+
+  .quick-select-buttons {
+    grid-template-columns: 1fr;
+  }
+}

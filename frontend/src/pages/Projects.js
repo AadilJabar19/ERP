@@ -6,7 +6,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import ActionDropdown from '../components/ActionDropdown';
+import CSVUpload from '../components/CSVUpload';
+import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
+import '../styles/pages/Projects.scss';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Projects = () => {
@@ -19,6 +22,7 @@ const Projects = () => {
   const [activeTab, setActiveTab] = useState('projects');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showCSVModal, setShowCSVModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [formData, setFormData] = useState({
@@ -139,31 +143,114 @@ const Projects = () => {
     );
   };
 
+  const handleCSVUpload = async (csvData) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/projects/bulk', {
+        projects: csvData
+      }, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      success(`Successfully imported ${csvData.length} projects`);
+      setShowCSVModal(false);
+      fetchProjects();
+    } catch (err) {
+      error('Error importing projects: ' + (err.response?.data?.message || 'Failed to import'));
+    }
+  };
+
+  const getCSVTemplate = () => {
+    return [{
+      name: 'Website Redesign',
+      code: 'PRJ001',
+      description: 'Complete website redesign project',
+      client: 'ABC Company',
+      startDate: '2024-01-15',
+      endDate: '2024-06-30',
+      budget: '50000',
+      status: 'planning',
+      priority: 'high'
+    }];
+  };
+
   const renderProjects = () => (
     <div>
-      <SearchFilter 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filterOptions={[
-          { value: 'planning', label: 'Planning' },
-          { value: 'active', label: 'Active' },
-          { value: 'on-hold', label: 'On Hold' },
-          { value: 'completed', label: 'Completed' },
-          { value: 'cancelled', label: 'Cancelled' }
-        ]}
-        selectedFilter={filterStatus}
-        setSelectedFilter={setFilterStatus}
-      />
+      <div className="module-filters">
+        <div className="filter-row">
+          <SearchFilter 
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            placeholder="Search projects..."
+          />
+          
+          <select 
+            value={filterStatus} 
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="status-filter"
+          >
+            <option value="">All Status</option>
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="on-hold">On Hold</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        
+        <div className="action-row">
+          {selectedItems.length > 0 && (
+            <ActionDropdown
+              actions={[
+                {
+                  label: `Edit (${selectedItems.length})`,
+                  icon: '✏️',
+                  onClick: () => {
+                    if (selectedItems.length === 1) {
+                      success('Edit project functionality');
+                    } else {
+                      error('Please select only one project to edit');
+                    }
+                  },
+                  className: 'primary',
+                  disabled: selectedItems.length !== 1
+                },
+                {
+                  label: `Delete (${selectedItems.length})`,
+                  icon: '🗑️',
+                  onClick: handleBulkDelete,
+                  className: 'danger'
+                },
+                {
+                  label: 'Clear Selection',
+                  icon: '✖️',
+                  onClick: clearSelection
+                }
+              ]}
+            />
+          )}
+          <Button 
+            variant="info" 
+            icon="📤" 
+            onClick={() => setShowCSVModal(true)}
+          >
+            Import CSV
+          </Button>
+          {hasRole(['admin', 'manager']) && (
+            <Button variant="primary" icon="➕" onClick={() => setShowModal(true)}>
+              Add Project
+            </Button>
+          )}
+        </div>
+      </div>
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: 0 }}>Projects Overview</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {hasRole(['admin', 'manager']) && (
-              <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                Add Project
-              </button>
-            )}
             {selectedItems.length > 0 && (
               <ActionDropdown
                 actions={[
@@ -520,6 +607,15 @@ const Projects = () => {
           <button type="submit" className="btn btn-success">Create Project</button>
         </form>
       </Modal>
+
+      <CSVUpload
+        isOpen={showCSVModal}
+        onClose={() => setShowCSVModal(false)}
+        onUpload={handleCSVUpload}
+        templateData={getCSVTemplate()}
+        title="Import Projects"
+        description="Upload a CSV file to bulk import projects. Download the template to see the required format."
+      />
     </div>
   );
 };

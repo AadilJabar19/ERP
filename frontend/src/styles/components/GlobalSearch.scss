@@ -1,0 +1,263 @@
+@import '../variables';
+@import '../mixins';
+
+.global-search-trigger {
+  @include flex-between;
+  gap: $spacing-3;
+  padding: $spacing-2 $spacing-4;
+  background: $gray-100;
+  border: 1px solid $gray-300;
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: all $transition-base;
+  min-width: 250px;
+
+  &:hover {
+    background: $gray-200;
+    border-color: $gray-400;
+  }
+
+  .search-icon {
+    font-size: $font-lg;
+  }
+
+  .search-text {
+    flex: 1;
+    text-align: left;
+    color: $gray-600;
+    font-size: $font-sm;
+  }
+
+  .search-shortcut {
+    font-size: $font-xs;
+    padding: 2px 6px;
+    background: $white;
+    border: 1px solid $gray-300;
+    border-radius: $radius-sm;
+    color: $gray-600;
+  }
+}
+
+.global-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: $z-modal;
+  @include flex-center;
+  @include fade-in;
+}
+
+.global-search-modal {
+  background: $white;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-2xl;
+  width: 90%;
+  max-width: 600px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  @include slide-up($transition-slow);
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  padding: $spacing-4;
+  border-bottom: 1px solid $gray-200;
+
+  .search-icon-large {
+    font-size: $font-2xl;
+    color: $gray-500;
+  }
+
+  .global-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: $font-lg;
+    color: $gray-900;
+    background: transparent;
+
+    &::placeholder {
+      color: $gray-400;
+    }
+  }
+
+  .search-loading {
+    font-size: $font-xl;
+    animation: spin 1s linear infinite;
+  }
+}
+
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  @include scrollbar-custom;
+}
+
+.search-empty {
+  padding: $spacing-10 $spacing-4;
+  text-align: center;
+  color: $gray-500;
+
+  .empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: $spacing-3;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-sm;
+  }
+}
+
+.results-list {
+  padding: $spacing-2;
+}
+
+.result-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  padding: $spacing-3;
+  border: none;
+  background: $white;
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: all $transition-base;
+  text-align: left;
+  margin-bottom: $spacing-2;
+
+  &:hover {
+    background: $gray-50;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  .result-icon {
+    font-size: $font-2xl;
+    flex-shrink: 0;
+  }
+
+  .result-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result-title {
+    font-weight: $font-weight-semibold;
+    color: $gray-900;
+    margin-bottom: 2px;
+    @include text-truncate;
+  }
+
+  .result-description {
+    font-size: $font-sm;
+    color: $gray-600;
+    @include text-truncate;
+  }
+
+  .result-type {
+    font-size: $font-xs;
+    padding: 2px 8px;
+    background: $gray-100;
+    border-radius: $radius-full;
+    color: $gray-700;
+    text-transform: capitalize;
+    flex-shrink: 0;
+  }
+}
+
+.search-suggestions {
+  padding: $spacing-4;
+
+  .suggestion-title {
+    font-size: $font-sm;
+    font-weight: $font-weight-semibold;
+    color: $gray-700;
+    margin-bottom: $spacing-3;
+  }
+
+  .suggestion-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: $spacing-3;
+    padding: $spacing-3;
+    border: none;
+    background: $white;
+    border-radius: $radius-lg;
+    cursor: pointer;
+    transition: all $transition-base;
+    text-align: left;
+    margin-bottom: $spacing-2;
+    font-size: $font-sm;
+    color: $gray-700;
+
+    &:hover {
+      background: $gray-50;
+    }
+
+    span {
+      font-size: $font-xl;
+    }
+  }
+}
+
+.search-footer {
+  padding: $spacing-3 $spacing-4;
+  border-top: 1px solid $gray-200;
+  background: $gray-50;
+  border-bottom-left-radius: $radius-xl;
+  border-bottom-right-radius: $radius-xl;
+}
+
+.search-tips {
+  display: flex;
+  gap: $spacing-4;
+  font-size: $font-xs;
+  color: $gray-600;
+
+  kbd {
+    padding: 2px 6px;
+    background: $white;
+    border: 1px solid $gray-300;
+    border-radius: $radius-sm;
+    font-family: monospace;
+    font-size: $font-xs;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@include respond-below($breakpoint-md) {
+  .global-search-trigger {
+    min-width: 150px;
+
+    .search-text {
+      display: none;
+    }
+  }
+
+  .global-search-modal {
+    width: 95%;
+    max-height: 80vh;
+  }
+}

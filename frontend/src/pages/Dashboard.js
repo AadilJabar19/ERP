@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useDashboardAnalytics } from '../hooks/useQueryHooks';
 import { Card, Badge, EmptyState } from '../components/ui';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ActivityTimeline from '../components/ActivityTimeline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
 import '../styles/pages/Dashboard.scss';
 
@@ -255,6 +256,11 @@ const Dashboard = () => {
             description="Activity will appear here once you start using the system"
           />
         )}
+      </Card>
+
+      {/* Activity Timeline */}
+      <Card title="📜 Recent Activity" className="activity-timeline-card">
+        <ActivityTimeline limit={15} />
       </Card>
     </div>
   );

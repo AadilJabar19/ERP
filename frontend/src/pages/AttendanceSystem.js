@@ -5,6 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
+import ExportMenu from '../components/ExportMenu';
 import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -253,6 +254,15 @@ const AttendanceSystem = () => {
               onClearSelection={recordsBulk.clearSelection}
             />
           )}
+          <ExportMenu 
+            data={attendanceRecords.filter(record => 
+              record.employee?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              record.employee?.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
+            )}
+            filename="attendance"
+            selectedItems={recordsBulk.selectedItems}
+            allData={attendanceRecords}
+          />
           <Button 
             variant="info" 
             icon="📤" 

@@ -5,11 +5,12 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { setupAxiosInterceptors } from './utils/csrf';
 import { initSentry, SentryErrorBoundary } from './config/sentry';
 import { queryClient } from './config/queryClient';
 import NotificationPanel from './components/NotificationPanel';
-import Navbar from './components/Navbar';
+import HorizontalNavbar from './components/HorizontalNavbar';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Sales from './pages/Sales';
@@ -39,6 +40,7 @@ import SystemConfig from './pages/SystemConfig';
 import Integrations from './pages/Integrations';
 import AIAssistantPage from './pages/AIAssistant';
 import AIAssistant from './components/AIAssistant';
+import QuickActions from './components/QuickActions';
 import './styles/main.scss';
 
 function App() {
@@ -52,12 +54,13 @@ function App() {
   return (
     <SentryErrorBoundary fallback={<div>An error occurred. Please refresh the page.</div>}>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ToastProvider>
-            <SocketProvider>
-              <Router>
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <SocketProvider>
+                <Router>
                 <div className="App">
-                  <Navbar />
+                  <HorizontalNavbar />
                   <div className="main-content">
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
@@ -93,11 +96,13 @@ function App() {
                   </div>
                   <NotificationPanel />
                   <AIAssistant />
+                  <QuickActions />
                 </div>
-              </Router>
-            </SocketProvider>
-          </ToastProvider>
-        </AuthProvider>
+                </Router>
+              </SocketProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
         {/* React Query Devtools - only visible in development */}
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

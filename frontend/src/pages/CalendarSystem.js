@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
+import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
+import '../styles/pages/CalendarSystem.scss';
 
 const CalendarSystem = () => {
   const { hasRole, user } = useAuth();
@@ -242,7 +245,7 @@ const CalendarSystem = () => {
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 className="page-title">📅 Calendar System</h1>
-        <button className="btn btn-primary" onClick={() => {
+        <Button variant="primary" icon="➕" onClick={() => {
           setEditingEvent(null);
           resetForm();
           if (selectedDate) {
@@ -254,26 +257,26 @@ const CalendarSystem = () => {
           }
           setShowModal(true);
         }}>
-          ➕ Add Event
-        </button>
+          Add Event
+        </Button>
       </div>
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <button className="btn btn-secondary" onClick={() => navigateMonth(-1)}>
+            <Button variant="secondary" onClick={() => navigateMonth(-1)}>
               ← Previous
-            </button>
+            </Button>
             <h2 style={{ margin: 0 }}>
               {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h2>
-            <button className="btn btn-secondary" onClick={() => navigateMonth(1)}>
+            <Button variant="secondary" onClick={() => navigateMonth(1)}>
               Next →
-            </button>
+            </Button>
           </div>
-          <button className="btn btn-info" onClick={() => setCurrentDate(new Date())}>
+          <Button variant="info" onClick={() => setCurrentDate(new Date())}>
             Today
-          </button>
+          </Button>
         </div>
 
         {loading ? <LoadingSpinner /> : renderCalendar()}
@@ -283,16 +286,18 @@ const CalendarSystem = () => {
         <div className="card" style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
             <h3>Events for {selectedDate.toLocaleDateString()}</h3>
-            {eventsBulk.selectedItems.length > 0 && (
-              <BulkActions
-                selectedCount={eventsBulk.selectedItems.length}
-                onBulkDelete={() => eventsBulk.handleBulkDelete('events', 'http://localhost:5000/api/events', fetchEvents)}
-                onClearSelection={eventsBulk.clearSelection}
-              />
-            )}
-            <button className="btn btn-info" onClick={() => setShowCSVModal(true)}>
-              📤 Import CSV
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {eventsBulk.selectedItems.length > 0 && (
+                <BulkActions
+                  selectedCount={eventsBulk.selectedItems.length}
+                  onBulkDelete={() => eventsBulk.handleBulkDelete('events', 'http://localhost:5000/api/events', fetchEvents)}
+                  onClearSelection={eventsBulk.clearSelection}
+                />
+              )}
+              <Button variant="info" icon="📤" onClick={() => setShowCSVModal(true)}>
+                Import CSV
+              </Button>
+            </div>
           </div>
           {getEventsForDate(selectedDate).length === 0 ? (
             <p>No events scheduled for this date.</p>

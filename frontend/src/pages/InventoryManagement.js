@@ -6,8 +6,11 @@ import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
+import ExportMenu from '../components/ExportMenu';
+import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import '../styles/pages/InventoryManagement.scss';
 
 const InventoryManagement = () => {
   const { hasRole } = useAuth();
@@ -304,48 +307,77 @@ const InventoryManagement = () => {
         <div style={{ display: 'flex', gap: '10px' }}>
           {hasRole(['admin', 'manager']) && (
             <>
-              <button className="btn btn-success" onClick={() => setShowStockModal(true)}>
-                📊 Stock Movement
-              </button>
-              <button className="btn btn-primary" onClick={() => {
+              <Button variant="success" icon="📊" onClick={() => setShowStockModal(true)}>
+                Stock Movement
+              </Button>
+              <Button variant="primary" icon="➕" onClick={() => {
                 setEditingItem(null);
                 resetForm();
                 setShowModal(true);
               }}>
-                ➕ Add Product
-              </button>
+                Add Product
+              </Button>
             </>
           )}
         </div>
       </div>
       
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        {productsBulk.selectedItems.length > 0 && (
-          <BulkActions
-            selectedCount={productsBulk.selectedItems.length}
-            onBulkDelete={() => productsBulk.handleBulkDelete('products', 'http://localhost:5000/api/inventory/products', fetchData)}
-            onClearSelection={productsBulk.clearSelection}
+      <div className="module-filters">
+        <div className="filter-row">
+          <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Search products..." />
+          
+          <select 
+            value={filterCategory} 
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="category-filter"
+          >
+            <option value="">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat._id} value={cat._id}>{cat.name}</option>
+            ))}
+          </select>
+          
+          <select 
+            value={filterWarehouse} 
+            onChange={(e) => setFilterWarehouse(e.target.value)}
+            className="warehouse-filter"
+          >
+            <option value="">All Warehouses</option>
+            {(warehouses || []).map(wh => (
+              <option key={wh._id} value={wh._id}>{wh.name}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="action-row">
+          {productsBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={productsBulk.selectedItems.length}
+              onBulkDelete={() => productsBulk.handleBulkDelete('products', 'http://localhost:5000/api/inventory/products', fetchData)}
+              onClearSelection={productsBulk.clearSelection}
+            />
+          )}
+          <ExportMenu 
+            data={(products || []).filter(product => 
+              product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              product.productId?.toLowerCase().includes(searchTerm.toLowerCase())
+            )}
+            filename="products"
+            selectedItems={productsBulk.selectedItems}
+            allData={products}
           />
-        )}
-        <button className="btn btn-info" onClick={() => {
-          setCSVUploadType('products');
-          setShowCSVModal(true);
-        }}>
-          📤 Import CSV
-        </button>
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-          <option value="">All Categories</option>
-          {categories.map(cat => (
-            <option key={cat._id} value={cat._id}>{cat.name}</option>
-          ))}
-        </select>
-        <select value={filterWarehouse} onChange={(e) => setFilterWarehouse(e.target.value)}>
-          <option value="">All Warehouses</option>
-          {(warehouses || []).map(wh => (
-            <option key={wh._id} value={wh._id}>{wh.name}</option>
-          ))}
-        </select>
+          <Button 
+            variant="info" 
+            icon="📤" 
+            onClick={() => {
+              setCSVUploadType('products');
+              setShowCSVModal(true);
+            }}
+          >
+            Import CSV
+          </Button>
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (

@@ -7,6 +7,8 @@ import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import useBulkActions from '../hooks/useBulkActions';
 import CSVUpload from '../components/CSVUpload';
+import { Button } from '../components/ui';
+import '../styles/pages/CRMSystem.scss';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const CRMSystem = () => {
@@ -316,37 +318,51 @@ const CRMSystem = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>🏢 Customer Management</h3>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn btn-success" onClick={() => setShowActivityModal(true)}>
-            📝 Log Activity
-          </button>
-          <button className="btn btn-info" onClick={() => setShowCSVUpload(true)}>
-            📤 Bulk Upload
-          </button>
-          <button className="btn btn-primary" onClick={() => {
+          <Button variant="success" icon="📝" onClick={() => setShowActivityModal(true)}>
+            Log Activity
+          </Button>
+          <Button variant="primary" icon="➕" onClick={() => {
             setEditingItem(null);
             resetForm();
             setShowModal(true);
           }}>
-            ➕ Add Customer
-          </button>
+            Add Customer
+          </Button>
         </div>
       </div>
       
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        {customersBulk.selectedItems.length > 0 && (
-          <BulkActions
-            selectedCount={customersBulk.selectedItems.length}
-            onBulkDelete={() => customersBulk.handleBulkDelete('customers', 'http://localhost:5000/api/customers', fetchData)}
-            onClearSelection={customersBulk.clearSelection}
-          />
-        )}
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="prospect">Prospect</option>
-        </select>
+      <div className="module-filters">
+        <div className="filter-row">
+          <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Search customers..." />
+          
+          <select 
+            value={filterStatus} 
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="status-filter"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="prospect">Prospect</option>
+          </select>
+        </div>
+        
+        <div className="action-row">
+          {customersBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={customersBulk.selectedItems.length}
+              onBulkDelete={() => customersBulk.handleBulkDelete('customers', 'http://localhost:5000/api/customers', fetchData)}
+              onClearSelection={customersBulk.clearSelection}
+            />
+          )}
+          <Button 
+            variant="info" 
+            icon="📤" 
+            onClick={() => setShowCSVUpload(true)}
+          >
+            Import CSV
+          </Button>
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (

@@ -6,8 +6,11 @@ import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
+import ExportMenu from '../components/ExportMenu';
+import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import '../styles/pages/SalesManagement.scss';
 
 const SalesManagement = () => {
   const { hasRole } = useAuth();
@@ -336,40 +339,63 @@ const SalesManagement = () => {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>🎯 Lead Management</h3>
-        <button className="btn btn-primary" onClick={() => {
+        <Button variant="primary" icon="➕" onClick={() => {
           setEditingItem(null);
           resetForm();
           setShowModal(true);
         }}>
-          ➕ Add Lead
-        </button>
+          Add Lead
+        </Button>
       </div>
       
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        {leadsBulk.selectedItems.length > 0 && (
-          <BulkActions
-            selectedCount={leadsBulk.selectedItems.length}
-            onBulkDelete={() => leadsBulk.handleBulkDelete('leads', 'http://localhost:5000/api/sales/leads', fetchData)}
-            onClearSelection={leadsBulk.clearSelection}
+      <div className="module-filters">
+        <div className="filter-row">
+          <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Search leads..." />
+          
+          <select 
+            value={filterStatus} 
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="status-filter"
+          >
+            <option value="">All Status</option>
+            <option value="new">New</option>
+            <option value="contacted">Contacted</option>
+            <option value="qualified">Qualified</option>
+            <option value="proposal">Proposal</option>
+            <option value="negotiation">Negotiation</option>
+            <option value="closed-won">Closed Won</option>
+            <option value="closed-lost">Closed Lost</option>
+          </select>
+        </div>
+        
+        <div className="action-row">
+          {leadsBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={leadsBulk.selectedItems.length}
+              onBulkDelete={() => leadsBulk.handleBulkDelete('leads', 'http://localhost:5000/api/sales/leads', fetchData)}
+              onClearSelection={leadsBulk.clearSelection}
+            />
+          )}
+          <ExportMenu 
+            data={leads.filter(lead => 
+              lead.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              lead.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase())
+            )}
+            filename="leads"
+            selectedItems={leadsBulk.selectedItems}
+            allData={leads}
           />
-        )}
-        <button className="btn btn-info" onClick={() => {
-          setCSVUploadType('leads');
-          setShowCSVModal(true);
-        }}>
-          📤 Import CSV
-        </button>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">All Status</option>
-          <option value="new">New</option>
-          <option value="contacted">Contacted</option>
-          <option value="qualified">Qualified</option>
-          <option value="proposal">Proposal</option>
-          <option value="negotiation">Negotiation</option>
-          <option value="closed-won">Closed Won</option>
-          <option value="closed-lost">Closed Lost</option>
-        </select>
+          <Button 
+            variant="info" 
+            icon="📤" 
+            onClick={() => {
+              setCSVUploadType('leads');
+              setShowCSVModal(true);
+            }}
+          >
+            Import CSV
+          </Button>
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (

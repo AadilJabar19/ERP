@@ -1,0 +1,158 @@
+// Dark Theme Variables
+// Applied when [data-theme="dark"] is set on html element
+
+[data-theme="dark"] {
+  // Background colors
+  --background: #1a1a1a;
+  --background-light: #2d2d2d;
+  --background-dark: #0d0d0d;
+  
+  // Text colors
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-tertiary: #808080;
+  
+  // Gray scale (inverted)
+  --gray-50: #2d2d2d;
+  --gray-100: #3d3d3d;
+  --gray-200: #4d4d4d;
+  --gray-300: #5d5d5d;
+  --gray-400: #6d6d6d;
+  --gray-500: #808080;
+  --gray-600: #999999;
+  --gray-700: #b3b3b3;
+  --gray-800: #cccccc;
+  --gray-900: #e6e6e6;
+  
+  // White and Black (inverted)
+  --white: #1a1a1a;
+  --black: #ffffff;
+  
+  // Border colors
+  --border-color: #3d3d3d;
+  --border-light: #2d2d2d;
+  --border-dark: #4d4d4d;
+  
+  // Card and surface colors
+  --card-bg: #2d2d2d;
+  --card-border: #3d3d3d;
+  
+  // Input colors
+  --input-bg: #2d2d2d;
+  --input-border: #4d4d4d;
+  --input-focus-border: #5d5d5d;
+  
+  // Shadows (softer in dark mode)
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  
+  // Primary colors (slightly adjusted for dark mode)
+  --primary-50: #1a2332;
+  --primary-500: #4a9eff;
+  --primary-600: #3a8eef;
+  --primary-700: #2a7edf;
+  
+  // Success colors
+  --success-50: #1a2e1f;
+  --success-500: #4ade80;
+  --success-600: #3ace70;
+  --success-700: #2abe60;
+  
+  // Danger colors
+  --danger-50: #2e1a1a;
+  --danger-500: #f87171;
+  --danger-600: #e86161;
+  --danger-700: #d85151;
+  
+  // Warning colors
+  --warning-50: #2e2a1a;
+  --warning-500: #fbbf24;
+  --warning-600: #ebaf14;
+  --warning-700: #db9f04;
+  
+  // Info colors
+  --info-50: #1a2a2e;
+  --info-500: #38bdf8;
+  --info-600: #28ade8;
+  --info-700: #189dd8;
+}
+
+// Dark mode specific styles
+[data-theme="dark"] {
+  .card {
+    background: var(--card-bg);
+    border-color: var(--card-border);
+    color: var(--text-primary);
+  }
+  
+  .btn {
+    &-secondary {
+      background: var(--gray-100);
+      color: var(--text-primary);
+      border-color: var(--gray-300);
+      
+      &:hover {
+        background: var(--gray-200);
+      }
+    }
+    
+    &-ghost {
+      color: var(--text-primary);
+      
+      &:hover {
+        background: var(--gray-100);
+      }
+    }
+  }
+  
+  input,
+  select,
+  textarea {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--text-primary);
+    
+    &:focus {
+      border-color: var(--input-focus-border);
+    }
+    
+    &::placeholder {
+      color: var(--text-tertiary);
+    }
+  }
+  
+  .table {
+    color: var(--text-primary);
+    
+    thead {
+      background: var(--gray-100);
+      border-bottom-color: var(--border-color);
+    }
+    
+    tbody tr {
+      border-bottom-color: var(--border-color);
+      
+      &:hover {
+        background: var(--gray-50);
+      }
+    }
+  }
+  
+  .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  
+  .modal-container {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+  
+  .page-container {
+    background: var(--background);
+    color: var(--text-primary);
+  }
+}

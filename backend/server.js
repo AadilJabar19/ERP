@@ -78,6 +78,7 @@ try {
 
 // Load routes with error handling
 const routes = [
+  { path: '/api/search', file: './routes/search' },
   { path: '/api/inventory', file: './routes/inventory' },
   { path: '/api/sales', file: './routes/sales' },
   { path: '/api/attendance', file: './routes/attendance' },

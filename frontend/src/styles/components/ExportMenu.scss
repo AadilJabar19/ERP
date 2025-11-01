@@ -1,0 +1,79 @@
+@import '../variables';
+@import '../mixins';
+
+.export-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.export-dropdown {
+  position: absolute;
+  top: calc(100% + $spacing-2);
+  right: 0;
+  background: $white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-xl;
+  min-width: 280px;
+  z-index: $z-dropdown;
+  @include fade-in;
+  border: 1px solid $gray-200;
+  overflow: hidden;
+}
+
+.export-dropdown-header {
+  padding: $spacing-3 $spacing-4;
+  background: $gray-50;
+  border-bottom: 1px solid $gray-200;
+  font-weight: $font-weight-semibold;
+  font-size: $font-sm;
+  color: $gray-700;
+}
+
+.export-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  padding: $spacing-3 $spacing-4;
+  border: none;
+  background: $white;
+  cursor: pointer;
+  transition: all $transition-base;
+  text-align: left;
+
+  &:hover {
+    background: $gray-50;
+  }
+
+  &:active {
+    background: $gray-100;
+  }
+
+  .export-icon {
+    font-size: $font-2xl;
+    flex-shrink: 0;
+  }
+
+  .export-details {
+    flex: 1;
+  }
+
+  .export-title {
+    font-weight: $font-weight-semibold;
+    color: $gray-900;
+    margin-bottom: 2px;
+  }
+
+  .export-desc {
+    font-size: $font-xs;
+    color: $gray-600;
+  }
+}
+
+@include respond-below($breakpoint-md) {
+  .export-dropdown {
+    right: auto;
+    left: 0;
+    min-width: 250px;
+  }
+}

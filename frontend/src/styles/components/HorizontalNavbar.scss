@@ -1,0 +1,534 @@
+@import '../variables';
+@import '../mixins';
+
+.horizontal-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: $white;
+  border-bottom: 1px solid $gray-200;
+  box-shadow: $shadow-sm;
+  z-index: $z-fixed;
+  @include fade-in;
+}
+
+.navbar-container {
+  max-width: 100%;
+  height: 100%;
+  padding: 0 $spacing-6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-4;
+}
+
+// Brand
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  text-decoration: none;
+  font-weight: $font-weight-bold;
+  font-size: $font-xl;
+  color: $gray-900;
+  transition: all $transition-base;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $primary-600;
+  }
+
+  .brand-icon {
+    font-size: $font-2xl;
+  }
+
+  .brand-text {
+    @include respond-below($breakpoint-md) {
+      display: none;
+    }
+  }
+}
+
+// Mobile Menu Toggle
+.mobile-menu-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: $spacing-2;
+
+  span {
+    width: 24px;
+    height: 2px;
+    background: $gray-700;
+    transition: all $transition-base;
+  }
+
+  @include respond-below($breakpoint-lg) {
+    display: flex;
+  }
+}
+
+// Main Menu
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  gap: $spacing-4;
+
+  @include respond-below($breakpoint-lg) {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: $white;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: $spacing-6;
+    transform: translateX(-100%);
+    transition: transform $transition-base;
+    overflow-y: auto;
+    box-shadow: $shadow-xl;
+
+    &.mobile-open {
+      transform: translateX(0);
+    }
+  }
+}
+
+.navbar-nav {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  flex: 1;
+
+  @include respond-below($breakpoint-lg) {
+    flex-direction: column;
+    width: 100%;
+    align-items: stretch;
+    gap: $spacing-3;
+  }
+}
+
+// Nav Link
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-2 $spacing-4;
+  color: $gray-700;
+  text-decoration: none;
+  border-radius: $radius-md;
+  font-size: $font-sm;
+  font-weight: $font-weight-medium;
+  transition: all $transition-base;
+  white-space: nowrap;
+
+  &:hover {
+    background: $gray-100;
+    color: $primary-600;
+  }
+
+  &.active {
+    background: $primary-50;
+    color: $primary-700;
+  }
+
+  .nav-icon {
+    font-size: $font-lg;
+  }
+
+  @include respond-below($breakpoint-lg) {
+    padding: $spacing-3 $spacing-4;
+    justify-content: flex-start;
+  }
+}
+
+.nav-link-button {
+  @extend .nav-link;
+  background: $primary-500;
+  color: $white;
+
+  &:hover {
+    background: $primary-600;
+    color: $white;
+  }
+}
+
+// Dropdown
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-2 $spacing-4;
+  background: none;
+  border: none;
+  color: $gray-700;
+  font-size: $font-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  border-radius: $radius-md;
+  transition: all $transition-base;
+  white-space: nowrap;
+
+  &:hover {
+    background: $gray-100;
+    color: $primary-600;
+  }
+
+  .nav-icon {
+    font-size: $font-lg;
+  }
+
+  .nav-arrow {
+    font-size: $font-xs;
+    transition: transform $transition-base;
+
+    &.open {
+      transform: rotate(180deg);
+    }
+  }
+
+  @include respond-below($breakpoint-lg) {
+    width: 100%;
+    justify-content: space-between;
+    padding: $spacing-3 $spacing-4;
+  }
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + $spacing-2);
+  left: 0;
+  min-width: 200px;
+  background: $white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-xl;
+  border: 1px solid $gray-200;
+  padding: $spacing-2;
+  z-index: $z-dropdown;
+  @include fade-in;
+
+  a, button {
+    display: flex;
+    align-items: center;
+    gap: $spacing-3;
+    padding: $spacing-3 $spacing-4;
+    color: $gray-700;
+    text-decoration: none;
+    border-radius: $radius-md;
+    font-size: $font-sm;
+    transition: all $transition-base;
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    min-height: 40px;
+
+    &:hover {
+      background: $gray-100;
+      color: $primary-600;
+    }
+
+    span:first-child {
+      width: 20px;
+      text-align: center;
+    }
+  }
+
+  @include respond-below($breakpoint-lg) {
+    position: static;
+    box-shadow: none;
+    border: none;
+    padding-left: $spacing-6;
+    margin-top: $spacing-2;
+  }
+}
+
+// Navbar Actions
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  flex-shrink: 0;
+
+  @include respond-below($breakpoint-lg) {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: $spacing-4;
+    border-top: 1px solid $gray-200;
+  }
+}
+
+// User Menu
+.user-dropdown {
+  .user-menu-trigger {
+    display: flex;
+    align-items: center;
+    gap: $spacing-3;
+    padding: $spacing-2 $spacing-3;
+    background: none;
+    border: 1px solid $gray-200;
+    border-radius: $radius-full;
+    cursor: pointer;
+    transition: all $transition-base;
+
+    &:hover {
+      background: $gray-50;
+      border-color: $gray-300;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: $radius-full;
+      background: $primary-500;
+      color: $white;
+      @include flex-center;
+      font-size: $font-sm;
+      font-weight: $font-weight-semibold;
+      overflow: hidden;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    .user-name {
+      font-size: $font-sm;
+      font-weight: $font-weight-medium;
+      color: $gray-900;
+
+      @include respond-below($breakpoint-md) {
+        display: none;
+      }
+    }
+
+    .nav-arrow {
+      font-size: $font-xs;
+      color: $gray-500;
+      transition: transform $transition-base;
+
+      &.open {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  .user-menu {
+    right: 0;
+    left: auto;
+    min-width: 260px;
+    max-width: 300px;
+  }
+}
+
+.user-menu-header-link {
+  text-decoration: none;
+  display: block;
+  transition: all $transition-base;
+
+  &:hover {
+    background: $gray-50;
+  }
+}
+
+.user-menu-header {
+  padding: $spacing-4;
+
+  .user-info-detail {
+    .user-name-large {
+      font-weight: $font-weight-semibold;
+      color: $gray-900;
+      margin-bottom: 4px;
+    }
+
+    .user-role {
+      font-size: $font-sm;
+      color: $gray-600;
+      text-transform: capitalize;
+    }
+  }
+}
+
+.user-menu-divider {
+  height: 1px;
+  background: $gray-200;
+  margin: $spacing-2 0;
+}
+
+.user-menu-item-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-3 $spacing-4;
+  color: $gray-700;
+  font-size: $font-sm;
+  min-height: 40px;
+  white-space: nowrap;
+
+  span:first-child {
+    width: 20px;
+    text-align: center;
+    margin-right: $spacing-3;
+    flex-shrink: 0;
+  }
+
+  span:nth-child(2) {
+    flex: 1;
+    margin-right: $spacing-3;
+  }
+
+  // Override notification center and theme toggle styles when inside menu
+  .notification-center,
+  .theme-toggle {
+    margin: 0;
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  // Fix notification dropdown positioning when inside user menu
+  .notification-center {
+    position: static;
+    
+    .notification-dropdown {
+      position: fixed;
+      top: auto;
+      right: 20px;
+      transform: translateY(4px);
+    }
+  }
+}
+
+// Mobile Overlay
+.mobile-overlay {
+  display: none;
+
+  @include respond-below($breakpoint-lg) {
+    display: block;
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: $z-modal - 1;
+    @include fade-in;
+  }
+}
+
+// Dark Mode
+[data-theme="dark"] {
+  .horizontal-navbar {
+    background: var(--card-bg);
+    border-bottom-color: var(--border-color);
+  }
+
+  .navbar-brand {
+    color: var(--text-primary);
+
+    &:hover {
+      color: var(--primary-500);
+    }
+  }
+
+  .mobile-menu-toggle span {
+    background: var(--text-primary);
+  }
+
+  .navbar-menu {
+    background: var(--card-bg);
+  }
+
+  .nav-link {
+    color: var(--text-secondary);
+
+    &:hover {
+      background: var(--gray-100);
+      color: var(--primary-500);
+    }
+
+    &.active {
+      background: var(--primary-50);
+      color: var(--primary-500);
+    }
+  }
+
+  .nav-dropdown-trigger {
+    color: var(--text-secondary);
+
+    &:hover {
+      background: var(--gray-100);
+      color: var(--primary-500);
+    }
+  }
+
+  .nav-dropdown-menu {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+
+    a, button {
+      color: var(--text-secondary);
+
+      &:hover {
+        background: var(--gray-100);
+        color: var(--primary-500);
+      }
+    }
+  }
+
+  .user-menu-trigger {
+    border-color: var(--border-color);
+
+    &:hover {
+      background: var(--gray-100);
+      border-color: var(--border-dark);
+    }
+
+    .user-name {
+      color: var(--text-primary);
+    }
+  }
+
+  .user-menu-header {
+    border-bottom-color: var(--border-color);
+
+    .user-name-large {
+      color: var(--text-primary);
+    }
+
+    .user-role {
+      color: var(--text-secondary);
+    }
+  }
+
+  .user-menu-divider {
+    background: var(--border-color);
+  }
+}
+
+// Adjust main content for horizontal navbar
+.App {
+  .main-content {
+    margin-top: 64px;
+    margin-left: 0 !important;
+    padding: $spacing-6;
+
+    @include respond-below($breakpoint-md) {
+      padding: $spacing-4;
+    }
+  }
+}

@@ -6,8 +6,10 @@ import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import BulkActions from '../components/BulkActions';
 import CSVUpload from '../components/CSVUpload';
+import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import '../styles/pages/FinanceManagement.scss';
 
 const FinanceManagement = () => {
   const { hasRole } = useAuth();
@@ -270,39 +272,53 @@ const FinanceManagement = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>🏦 Chart of Accounts</h3>
         {hasRole(['admin', 'manager']) && (
-          <button className="btn btn-primary" onClick={() => {
+          <Button variant="primary" icon="➕" onClick={() => {
             setEditingItem(null);
             resetForm();
             setShowModal(true);
           }}>
-            ➕ Add Account
-          </button>
+            Add Account
+          </Button>
         )}
       </div>
       
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        {accountsBulk.selectedItems.length > 0 && (
-          <BulkActions
-            selectedCount={accountsBulk.selectedItems.length}
-            onBulkDelete={() => accountsBulk.handleBulkDelete('accounts', 'http://localhost:5000/api/finance/accounts', fetchData)}
-            onClearSelection={accountsBulk.clearSelection}
-          />
-        )}
-        <button className="btn btn-info" onClick={() => {
-          setCSVUploadType('accounts');
-          setShowCSVModal(true);
-        }}>
-          📤 Import CSV
-        </button>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-          <option value="">All Types</option>
-          <option value="asset">Asset</option>
-          <option value="liability">Liability</option>
-          <option value="equity">Equity</option>
-          <option value="revenue">Revenue</option>
-          <option value="expense">Expense</option>
-        </select>
+      <div className="module-filters">
+        <div className="filter-row">
+          <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Search accounts..." />
+          
+          <select 
+            value={filterType} 
+            onChange={(e) => setFilterType(e.target.value)}
+            className="type-filter"
+          >
+            <option value="">All Types</option>
+            <option value="asset">Asset</option>
+            <option value="liability">Liability</option>
+            <option value="equity">Equity</option>
+            <option value="revenue">Revenue</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+        
+        <div className="action-row">
+          {accountsBulk.selectedItems.length > 0 && (
+            <BulkActions
+              selectedCount={accountsBulk.selectedItems.length}
+              onBulkDelete={() => accountsBulk.handleBulkDelete('accounts', 'http://localhost:5000/api/finance/accounts', fetchData)}
+              onClearSelection={accountsBulk.clearSelection}
+            />
+          )}
+          <Button 
+            variant="info" 
+            icon="📤" 
+            onClick={() => {
+              setCSVUploadType('accounts');
+              setShowCSVModal(true);
+            }}
+          >
+            Import CSV
+          </Button>
+        </div>
       </div>
       
       {loading ? <LoadingSpinner /> : (

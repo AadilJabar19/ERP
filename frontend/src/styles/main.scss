@@ -7,8 +7,11 @@
 @import './variables';
 @import './mixins';
 
-// 2. Base Styles (Global)
-@import './base/App';
+// 2. Theme (Dark Mode Support)
+@import './theme-dark';
+
+// 3. Base Styles (Global)
+@import './base/AppClean';
 
 // 3. Components (Reusable UI)
 // UI Components
@@ -26,14 +29,23 @@
 @import './components/ActionDropdown';
 @import './components/ConfirmModal';
 
+// New Feature Components
+@import './components/HorizontalNavbar';
+@import './components/ExportMenu';
+@import './components/NotificationCenter';
+@import './components/DateRangeFilter';
+@import './components/ThemeToggle';
+@import './components/GlobalSearch';
+@import './components/QuickActions';
+@import './components/ActivityTimeline';
+
 // 4. Pages (Page-specific)
 @import './pages/Dashboard';
 @import './pages/AttendanceSystem';
 @import './pages/HRM';
-
-// Add more page imports as needed:
-// @import './pages/InventoryManagement';
-// @import './pages/SalesManagement';
-// @import './pages/CalendarSystem';
-// @import './pages/FinanceManagement';
-// @import './pages/CRMSystem';
+@import './pages/InventoryManagement';
+@import './pages/SalesManagement';
+@import './pages/FinanceManagement';
+@import './pages/CalendarSystem';
+@import './pages/CRMSystem';
+@import './pages/Projects';

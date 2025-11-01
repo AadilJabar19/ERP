@@ -1,0 +1,210 @@
+@import '../variables';
+@import '../mixins';
+
+.notification-center {
+  position: relative;
+}
+
+.notification-bell {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: $radius-full;
+  transition: all $transition-base;
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+
+  &:hover {
+    background: $gray-100;
+  }
+
+  .bell-icon {
+    font-size: 16px;
+  }
+
+  .notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: $danger-500;
+    color: $white;
+    font-size: $font-xs;
+    font-weight: $font-weight-bold;
+    padding: 2px 6px;
+    border-radius: $radius-full;
+    min-width: 18px;
+    text-align: center;
+    @include pulse;
+  }
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + $spacing-2);
+  right: 0;
+  width: 380px;
+  max-height: 500px;
+  background: $white;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-2xl;
+  z-index: $z-dropdown;
+  @include fade-in;
+  border: 1px solid $gray-200;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-header {
+  padding: $spacing-4;
+  border-bottom: 1px solid $gray-200;
+  @include flex-between;
+  flex-shrink: 0;
+
+  h3 {
+    margin: 0;
+    font-size: $font-lg;
+    font-weight: $font-weight-semibold;
+    color: $gray-900;
+  }
+
+  .notification-count {
+    font-size: $font-sm;
+    color: $primary-600;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.notification-list {
+  flex: 1;
+  overflow-y: auto;
+  @include scrollbar-custom;
+}
+
+.notification-empty {
+  padding: $spacing-10 $spacing-4;
+  text-align: center;
+  color: $gray-500;
+
+  .empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: $spacing-3;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-sm;
+  }
+}
+
+.notification-item {
+  display: flex;
+  gap: $spacing-3;
+  padding: $spacing-4;
+  border-bottom: 1px solid $gray-100;
+  border-left: 3px solid transparent;
+  transition: all $transition-base;
+  cursor: pointer;
+
+  &:hover {
+    background: $gray-50;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .notification-icon {
+    font-size: $font-xl;
+    flex-shrink: 0;
+  }
+
+  .notification-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .notification-title {
+    font-weight: $font-weight-semibold;
+    color: $gray-900;
+    margin-bottom: 4px;
+    font-size: $font-sm;
+  }
+
+  .notification-message {
+    color: $gray-600;
+    font-size: $font-sm;
+    margin-bottom: 4px;
+    @include text-truncate;
+  }
+
+  .notification-time {
+    font-size: $font-xs;
+    color: $gray-500;
+  }
+
+  .notification-close {
+    background: none;
+    border: none;
+    color: $gray-400;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    @include flex-center;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+    transition: all $transition-base;
+
+    &:hover {
+      background: $gray-200;
+      color: $gray-700;
+    }
+  }
+}
+
+.notification-footer {
+  padding: $spacing-3;
+  border-top: 1px solid $gray-200;
+  text-align: center;
+  flex-shrink: 0;
+
+  .clear-all-btn {
+    background: none;
+    border: none;
+    color: $primary-600;
+    font-size: $font-sm;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    padding: $spacing-2 $spacing-4;
+    border-radius: $radius-md;
+    transition: all $transition-base;
+
+    &:hover {
+      background: $primary-50;
+      color: $primary-700;
+    }
+  }
+}
+
+@include respond-below($breakpoint-md) {
+  .notification-dropdown {
+    width: 320px;
+    max-height: 400px;
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .notification-dropdown {
+    position: fixed;
+    top: 60px;
+    right: $spacing-2;
+    left: $spacing-2;
+    width: auto;
+  }
+}

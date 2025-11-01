@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import GlobalSearch from './GlobalSearch';
+import NotificationCenter from './NotificationCenter';
+import ThemeToggle from './ThemeToggle';
 
 const ModuleGroup = ({ title, icon, children, isOpen, onToggle }) => (
   <li className="module-group">
@@ -62,7 +65,14 @@ const Navbar = () => {
         <span></span>
       </button>
       <nav className={`navbar ${isOpen ? 'navbar-open' : ''}`}>
-        <h2>Claryx ERP</h2>
+        <div className="navbar-header">
+          <h2>Claryx ERP</h2>
+          <div className="navbar-actions">
+            <GlobalSearch />
+            <NotificationCenter />
+            <ThemeToggle />
+          </div>
+        </div>
         <div className="user-info">
           <Link to="/profile-system" onClick={() => setIsOpen(false)} className="user-profile-link">
             <div className="user-avatar">
