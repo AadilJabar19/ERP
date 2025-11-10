@@ -19,6 +19,9 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
+      // Temporarily disabled socket connection to prevent 400 errors
+      // Uncomment when backend server is running with Socket.io support
+      /*
       const token = localStorage.getItem('token');
       const newSocket = io('http://localhost:5000', {
         auth: { token }
@@ -54,6 +57,7 @@ export const SocketProvider = ({ children }) => {
       return () => {
         newSocket.close();
       };
+      */
     }
   }, [user]);
 
