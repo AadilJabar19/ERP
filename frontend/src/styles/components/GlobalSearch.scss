@@ -11,6 +11,7 @@
   cursor: pointer;
   transition: all $transition-base;
   min-width: 250px;
+  align-items: center;
 
   &:hover {
     background: $gray-200;
@@ -19,6 +20,10 @@
 
   .search-icon {
     font-size: $font-lg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
   }
 
   .search-text {
@@ -73,6 +78,10 @@
   .search-icon-large {
     font-size: $font-2xl;
     color: $gray-500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
   }
 
   .global-search-input {

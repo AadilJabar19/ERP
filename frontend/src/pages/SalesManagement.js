@@ -11,9 +11,11 @@ import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import '../styles/pages/SalesManagement.scss';
+import { useLanguage } from '../context/LanguageContext';
 
 const SalesManagement = () => {
   const { hasRole } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('leads');
   
   // Bulk actions hooks
@@ -338,7 +340,7 @@ const SalesManagement = () => {
   const renderLeads = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>🎯 Lead Management</h3>
+        <h3>🎯 Lead {t('management')}</h3>
         <Button variant="primary" icon="➕" onClick={() => {
           setEditingItem(null);
           resetForm();
@@ -490,7 +492,7 @@ const SalesManagement = () => {
   const renderQuotes = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>📋 Quote Management</h3>
+        <h3>📋 Quote {t('management')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {quotesBulk.selectedItems.length > 0 && (
             <BulkActions
@@ -750,7 +752,7 @@ const SalesManagement = () => {
   const renderCustomers = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>👥 Customer Management</h3>
+        <h3>👥 {t('customerManagement')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {customersBulk.selectedItems.length > 0 && (
             <BulkActions
@@ -961,7 +963,7 @@ const SalesManagement = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Sales Management System</h1>
+      <h1 className="page-title">{t('salesManagement')}</h1>
       
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 

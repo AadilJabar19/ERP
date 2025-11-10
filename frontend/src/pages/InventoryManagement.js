@@ -11,9 +11,11 @@ import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import '../styles/pages/InventoryManagement.scss';
+import { useLanguage } from '../context/LanguageContext';
 
 const InventoryManagement = () => {
   const { hasRole } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('products');
   
   // Bulk actions hooks
@@ -303,7 +305,7 @@ const InventoryManagement = () => {
   const renderProducts = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>📦 Product Management</h3>
+        <h3>📦 Product {t('management')}</h3>
         <div style={{ display: 'flex', gap: '10px' }}>
           {hasRole(['admin', 'manager']) && (
             <>
@@ -315,7 +317,7 @@ const InventoryManagement = () => {
                 resetForm();
                 setShowModal(true);
               }}>
-                Add Product
+                {t('addNew')} Product
               </Button>
             </>
           )}
@@ -464,7 +466,7 @@ const InventoryManagement = () => {
   const renderCategories = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>🏷️ Category Management</h3>
+        <h3>🏷️ {t('categoryManagement')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {categoriesBulk.selectedItems.length > 0 && (
             <BulkActions
@@ -551,7 +553,7 @@ const InventoryManagement = () => {
   const renderWarehouses = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>🏭 Warehouse Management</h3>
+        <h3>🏭 {t('warehouseManagement')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {warehousesBulk.selectedItems.length > 0 && (
             <BulkActions
@@ -640,7 +642,7 @@ const InventoryManagement = () => {
   const renderMovements = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>📊 Stock Movements</h3>
+        <h3>📊 {t('stockMovements')}</h3>
         <button className="btn btn-primary" onClick={() => setShowStockModal(true)}>
           ➕ Record Movement
         </button>
@@ -696,7 +698,7 @@ const InventoryManagement = () => {
   const renderSuppliers = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>🏢 Supplier Management</h3>
+        <h3>🏢 {t('supplierManagement')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {suppliersBulk.selectedItems.length > 0 && (
             <BulkActions
@@ -919,7 +921,7 @@ const InventoryManagement = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Inventory Management System</h1>
+      <h1 className="page-title">{t('inventoryManagement')}</h1>
       
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 

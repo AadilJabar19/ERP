@@ -1,0 +1,93 @@
+// Enhanced Dark Mode Theme
+[data-theme="dark"] {
+  // Colors
+  --primary-color: #4f46e5;
+  --secondary-color: #6b7280;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #3b82f6;
+
+  // Background colors
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --bg-card: #1f2937;
+  --bg-modal: #111827;
+
+  // Text colors
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --text-inverse: #111827;
+
+  // Border colors
+  --border-color: #374151;
+  --border-light: #4b5563;
+  --border-dark: #1f2937;
+
+  // Shadow
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+
+  // Component specific
+  .card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .button {
+    &.primary {
+      background: var(--primary-color);
+      color: white;
+    }
+    
+    &.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border-color: var(--border-color);
+    }
+  }
+
+  .input {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+
+  .navbar {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
+
+  .sidebar {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
+
+  .modal {
+    .modal-content {
+      background: var(--bg-modal);
+      color: var(--text-primary);
+    }
+  }
+
+  .table {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    
+    th {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+    
+    td {
+      border-color: var(--border-color);
+    }
+  }
+}

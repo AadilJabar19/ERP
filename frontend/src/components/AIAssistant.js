@@ -95,7 +95,7 @@ const AIAssistant = () => {
         style={{
           position: 'fixed',
           bottom: '20px',
-          right: '20px',
+          right: '100px',
           width: '60px',
           height: '60px',
           borderRadius: '50%',
@@ -105,7 +105,7 @@ const AIAssistant = () => {
           fontSize: '24px',
           cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          zIndex: 1000,
+          zIndex: 999,
           transition: 'transform 0.3s'
         }}
         onMouseEnter={(e) => e.target.style.transform = 'scale(1.1)'}
@@ -125,7 +125,7 @@ const AIAssistant = () => {
           background: 'white',
           borderRadius: '12px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          zIndex: 1001,
+          zIndex: 999,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'

@@ -29,7 +29,7 @@ router.get('/employees', auth, async (req, res) => {
       .populate('employment.manager', 'personalInfo.firstName personalInfo.lastName employeeId')
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: 1 });
       
     const total = await Employee.countDocuments(query);
     
@@ -45,11 +45,14 @@ router.get('/employees', auth, async (req, res) => {
 });
 
 router.post('/employees', auth, roleAuth(['admin', 'manager']), async (req, res) => {
+  console.log('POST /api/hrm/employees called at:', new Date().toISOString());
   try {
     const employee = new Employee(req.body);
     await employee.save();
+    console.log('Employee created successfully:', employee.employeeId);
     res.status(201).json(employee);
   } catch (error) {
+    console.log('Error creating employee:', error.message);
     res.status(400).json({ message: error.message });
   }
 });
@@ -430,40 +433,7 @@ router.get('/analytics', auth, roleAuth(['admin', 'manager']), async (req, res) 
   }
 });
 
-// Convert employee to ERP user
-router.post('/employees/:id/convert-to-user', auth, roleAuth(['admin', 'manager']), async (req, res) => {
-  try {
-    const employee = await Employee.findById(req.params.id);
-    if (!employee) {
-      return res.status(404).json({ message: 'Employee not found' });
-    }
-    
-    // Check if employee already has a user account
-    if (employee.userId) {
-      return res.status(400).json({ message: 'Employee already has a user account' });
-    }
-    
-    const { password, role = 'employee' } = req.body;
-    
-    const user = new User({
-      name: employee.fullName,
-      email: employee.contactInfo.email,
-      password,
-      role,
-      isActive: true
-    });
-    
-    await user.save();
-    
-    // Link the user to the employee
-    employee.userId = user._id;
-    await employee.save();
-    
-    res.status(201).json({ user, employee });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+
 
 // Get employees without user accounts
 router.get('/employees/without-users', auth, roleAuth(['admin', 'manager']), async (req, res) => {

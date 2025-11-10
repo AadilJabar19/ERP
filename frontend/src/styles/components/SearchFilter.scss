@@ -17,18 +17,26 @@
   
   .search-icon {
     position: absolute;
-    left: $spacing-3;
+    left: $spacing-8;
     top: 50%;
     transform: translateY(-50%);
     color: $gray-500;
     pointer-events: none;
     font-size: $font-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 16px;
+    line-height: 1;
   }
 }
 
 .search-input {
   @include input-base;
   padding-left: $spacing-10;
+  height: 40px;
+  display: flex;
+  align-items: center;
 }
 
 .filter-select {

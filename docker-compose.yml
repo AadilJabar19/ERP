@@ -7,8 +7,8 @@ services:
     container_name: claryx-mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-claryx_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-CX9k2mP8vQ7nR5tL3wE6yU4iO1aS0dF}
       MONGO_INITDB_DATABASE: claryx-erp
     ports:
       - "27017:27017"
@@ -28,7 +28,7 @@ services:
     image: redis:7-alpine
     container_name: claryx-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispassword}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-RX7m9N2kP5qW8tY1uI4oE6rT3aS0dF}
     ports:
       - "6379:6379"
     volumes:
@@ -51,12 +51,13 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password}@mongodb:27017/claryx-erp?authSource=admin
-      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-change-in-production}
-      SESSION_SECRET: ${SESSION_SECRET:-your-session-secret-change-in-production}
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:-claryx_admin}:${MONGO_ROOT_PASSWORD:-CX9k2mP8vQ7nR5tL3wE6yU4iO1aS0dF}@mongodb:27017/claryx-erp?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-a8f5f167f44f4964e6c998dee827110c}
+      SESSION_SECRET: ${SESSION_SECRET:-b9e6a7c8d9f0e1a2b3c4d5e6f7a8b9c0}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispassword}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-RX7m9N2kP5qW8tY1uI4oE6rT3aS0dF}
       SENTRY_DSN: ${SENTRY_DSN:-}
       UPLOAD_DIR: /app/uploads
       MAX_FILE_SIZE: 5242880
@@ -86,7 +87,7 @@ services:
     container_name: claryx-frontend
     restart: unless-stopped
     environment:
-      REACT_APP_API_URL: http://localhost:5000
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:5000}
       REACT_APP_SENTRY_DSN: ${REACT_APP_SENTRY_DSN:-}
       REACT_APP_ENVIRONMENT: production
     ports:

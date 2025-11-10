@@ -9,6 +9,7 @@
 
 // 2. Theme (Dark Mode Support)
 @import './theme-dark';
+@import './theme-enhanced';
 
 // 3. Base Styles (Global)
 @import './base/AppClean';
@@ -49,3 +50,109 @@
 @import './pages/CalendarSystem';
 @import './pages/CRMSystem';
 @import './pages/Projects';
+
+// 5. Mobile Responsive
+@import './mobile';
+
+// 6. Language Selector
+.language-selector {
+  position: relative;
+  display: inline-block;
+  
+  .language-trigger {
+    white-space: nowrap;
+    min-width: auto;
+  }
+  
+  .language-dropdown {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    min-width: 140px;
+    overflow: hidden;
+    
+    .language-option {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: none;
+      background: white;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-size: 0.875rem;
+      
+      &:hover {
+        background: #f8fafc;
+      }
+      
+      &.active {
+        background: #3b82f6;
+        color: white;
+      }
+      
+      &:first-child {
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+      }
+      
+      &:last-child {
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+      }
+    }
+  }
+}
+
+[data-theme="dark"] .language-selector {
+  .language-dropdown {
+    background: #1f2937;
+    border-color: #374151;
+    
+    .language-option {
+      background: #1f2937;
+      color: #f9fafb;
+      
+      &:hover {
+        background: #374151;
+      }
+      
+      &.active {
+        background: #3b82f6;
+        color: white;
+      }
+    }
+  }
+}
+
+// 7. Search Filters
+.search-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  
+  .filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    
+    &.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+    
+    &:hover {
+      background: var(--bg-tertiary);
+    }
+  }
+}

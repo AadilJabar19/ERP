@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { setupAxiosInterceptors } from './utils/csrf';
 import { initSentry, SentryErrorBoundary } from './config/sentry';
 import { queryClient } from './config/queryClient';
@@ -49,13 +50,21 @@ function App() {
     initSentry();
     // Setup axios interceptors for CSRF
     setupAxiosInterceptors();
+    
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('SW registered'))
+        .catch(() => console.log('SW registration failed'));
+    }
   }, []);
 
   return (
     <SentryErrorBoundary fallback={<div>An error occurred. Please refresh the page.</div>}>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <AuthProvider>
             <ToastProvider>
               <SocketProvider>
                 <Router>
@@ -101,10 +110,9 @@ function App() {
                 </Router>
               </SocketProvider>
             </ToastProvider>
-          </AuthProvider>
-        </ThemeProvider>
-        {/* React Query Devtools - only visible in development */}
-        <ReactQueryDevtools initialIsOpen={false} />
+            </AuthProvider>
+          </ThemeProvider>
+        </LanguageProvider>
       </QueryClientProvider>
     </SentryErrorBoundary>
   );

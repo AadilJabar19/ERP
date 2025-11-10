@@ -10,13 +10,17 @@ import CSVUpload from '../components/CSVUpload';
 import ActionDropdown from '../components/ActionDropdown';
 import ExportMenu from '../components/ExportMenu';
 import DateRangeFilter from '../components/DateRangeFilter';
+import Pagination from '../components/Pagination';
 import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
+import usePagination from '../hooks/usePagination';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import '../styles/pages/HRM.scss';
+import { useLanguage } from '../context/LanguageContext';
 
 const HRM = () => {
   const { hasRole, user } = useAuth();
+  const { t } = useLanguage();
   
 
   const { success, error, showConfirm } = useToast();
@@ -157,16 +161,26 @@ const HRM = () => {
           break;
       }
       
+      let response;
       if (method === 'put') {
-        await axios.put(endpoint, data, {
+        response = await axios.put(endpoint, data, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true
         });
       } else {
-        await axios.post(endpoint, data, {
+        response = await axios.post(endpoint, data, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true
         });
+      }
+      
+      // Update local state instead of refetching
+      if (activeTab === 'employees' && response.data) {
+        if (editingEmployee) {
+          setEmployees(prev => prev.map(emp => emp._id === editingEmployee._id ? response.data : emp));
+        } else {
+          setEmployees(prev => [response.data, ...prev]);
+        }
       }
       
       setShowModal(false);
@@ -186,7 +200,9 @@ const HRM = () => {
         baseSalary: '', overtime: 0, bonuses: 0, deductions: 0, 
         payPeriod: { startDate: '', endDate: '' }, comments: ''
       });
-      fetchData();
+      if (activeTab !== 'employees') {
+        fetchData();
+      }
     } catch (err) {
       error('Error: ' + (err.response?.data?.message || 'Failed to submit'));
     }
@@ -348,7 +364,7 @@ const HRM = () => {
       
       switch (activeTab) {
         case 'employees':
-          const empRes = await axios.get('http://localhost:5000/api/hrm/employees', { headers, withCredentials: true });
+          const empRes = await axios.get('http://localhost:5000/api/hrm/employees?limit=1000', { headers, withCredentials: true });
           setEmployees(empRes.data.employees || []);
           break;
         case 'leaves':
@@ -388,11 +404,45 @@ const HRM = () => {
     }
   };
 
+  const filteredEmployees = employees.filter(emp => 
+    emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  const employeePagination = usePagination(filteredEmployees);
+
   const renderEmployees = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>Employee Management</h3>
+        <h3 style={{ margin: 0 }}>{t('employees')} {t('management')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          label="Hire Date Range"
+        />
+        <Button variant="secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px' }}>
+          <span>Show:</span>
+          <select 
+            value={employeePagination.itemsPerPage} 
+            onChange={(e) => employeePagination.changeItemsPerPage(parseInt(e.target.value))}
+            style={{ 
+              border: 'none',
+              background: 'transparent',
+              fontSize: '14px',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={200}>200</option>
+            <option value={1000}>1000</option>
+          </select>
+        </Button>
           {hasRole(['admin', 'manager']) && (
             <Button variant="primary" onClick={() => {
               setEditingEmployee(null);
@@ -406,14 +456,12 @@ const HRM = () => {
               });
               setShowModal(true);
             }}>
-              Add Employee
+              {t('addNew')} {t('employees')}
             </Button>
           )}
+          
           <ExportMenu 
-            data={employees.filter(emp => 
-              emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              emp.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
-            )}
+            data={filteredEmployees}
             filename="employees"
             selectedItems={selectedItems}
             allData={employees}
@@ -461,13 +509,8 @@ const HRM = () => {
           setSearchTerm={setSearchTerm}
           placeholder="Search employees..."
         />
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          label="Hire Date Range"
-        />
+        
+        
       </div>
       
       {loading ? <LoadingSpinner /> : (
@@ -493,10 +536,7 @@ const HRM = () => {
               </tr>
             </thead>
             <tbody>
-              {employees.filter(emp => 
-                emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                emp.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
-              ).map(employee => (
+              {employeePagination.paginatedData.map(employee => (
                 <tr key={employee._id}>
                   <td>
                     <input 
@@ -543,13 +583,26 @@ const HRM = () => {
           </table>
         </div>
       )}
+      
+      <Pagination
+        currentPage={employeePagination.currentPage}
+        totalPages={employeePagination.totalPages}
+        onPageChange={employeePagination.goToPage}
+        totalItems={employeePagination.totalItems}
+        startIndex={employeePagination.startIndex}
+        endIndex={employeePagination.endIndex}
+        itemsPerPage={employeePagination.itemsPerPage}
+        onItemsPerPageChange={employeePagination.changeItemsPerPage}
+      />
     </div>
   );
+
+  const leavesPagination = usePagination(leaves);
 
   const renderLeaves = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>Leave Management</h3>
+        <h3 style={{ margin: 0 }}>{t('leaveManagement')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             Apply Leave
@@ -587,64 +640,76 @@ const HRM = () => {
       </div>
       
       {loading ? <LoadingSpinner /> : (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>
-                  <input 
-                    type="checkbox" 
-                    checked={selectAll}
-                    onChange={(e) => handleSelectAll(e, leaves)}
-                  />
-                </th>
-                <th>Employee</th>
-                <th>Leave Type</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Days</th>
-                <th>Status</th>
-                <th>Applied Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaves.map(leave => (
-                <tr key={leave._id}>
-                  <td>
+        <>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>
                     <input 
                       type="checkbox" 
-                      checked={selectedItems.includes(leave._id)}
-                      onChange={(e) => handleSelectItem(e, leave._id)}
+                      checked={selectAll}
+                      onChange={(e) => handleSelectAll(e, leaves)}
                     />
-                  </td>
-                  <td>{leave.employee?.personalInfo?.firstName} {leave.employee?.personalInfo?.lastName}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: '#17a2b8', color: 'white'
-                    }}>
-                      {leave.leaveType}
-                    </span>
-                  </td>
-                  <td>{new Date(leave.startDate).toLocaleDateString()}</td>
-                  <td>{new Date(leave.endDate).toLocaleDateString()}</td>
-                  <td>{leave.totalDays}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
-                      backgroundColor: leave.status === 'approved' ? '#28a745' : 
-                                     leave.status === 'rejected' ? '#dc3545' : '#ffc107',
-                      color: 'white'
-                    }}>
-                      {leave.status}
-                    </span>
-                  </td>
-                  <td>{new Date(leave.appliedDate).toLocaleDateString()}</td>
+                  </th>
+                  <th>Employee</th>
+                  <th>Leave Type</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Days</th>
+                  <th>Status</th>
+                  <th>Applied Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {leavesPagination.paginatedData.map(leave => (
+                  <tr key={leave._id}>
+                    <td>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedItems.includes(leave._id)}
+                        onChange={(e) => handleSelectItem(e, leave._id)}
+                      />
+                    </td>
+                    <td>{leave.employee?.personalInfo?.firstName} {leave.employee?.personalInfo?.lastName}</td>
+                    <td>
+                      <span style={{
+                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                        backgroundColor: '#17a2b8', color: 'white'
+                      }}>
+                        {leave.leaveType}
+                      </span>
+                    </td>
+                    <td>{new Date(leave.startDate).toLocaleDateString()}</td>
+                    <td>{new Date(leave.endDate).toLocaleDateString()}</td>
+                    <td>{leave.totalDays}</td>
+                    <td>
+                      <span style={{
+                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                        backgroundColor: leave.status === 'approved' ? '#28a745' : 
+                                       leave.status === 'rejected' ? '#dc3545' : '#ffc107',
+                        color: 'white'
+                      }}>
+                        {leave.status}
+                      </span>
+                    </td>
+                    <td>{new Date(leave.appliedDate).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination
+            currentPage={leavesPagination.currentPage}
+            totalPages={leavesPagination.totalPages}
+            onPageChange={leavesPagination.goToPage}
+            totalItems={leavesPagination.totalItems}
+            startIndex={leavesPagination.startIndex}
+            endIndex={leavesPagination.endIndex}
+            itemsPerPage={leavesPagination.itemsPerPage}
+            // onItemsPerPageChange={leavesPagination.changeItemsPerPage}
+          />
+        </>
       )}
     </div>
   );
@@ -652,7 +717,7 @@ const HRM = () => {
   const renderTraining = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>Training & Development</h3>
+        <h3 style={{ margin: 0 }}>{t('trainingDevelopment')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {hasRole(['admin', 'manager']) && (
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
@@ -895,7 +960,7 @@ const HRM = () => {
   const renderPerformance = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>Performance Reviews</h3>
+        <h3 style={{ margin: 0 }}>{t('performanceReviews')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {hasRole(['admin', 'manager']) && (
             <button className="btn btn-primary" onClick={() => {
@@ -1001,7 +1066,7 @@ const HRM = () => {
   const renderPayroll = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>Payroll Management</h3>
+        <h3 style={{ margin: 0 }}>{t('payrollManagement')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {hasRole(['admin', 'manager']) && (
             <button className="btn btn-primary" onClick={() => {
@@ -1096,7 +1161,7 @@ const HRM = () => {
   const renderDepartments = () => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>Department Management</h3>
+        <h3 style={{ margin: 0 }}>{t('departmentManagement')}</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {hasRole(['admin']) && (
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
@@ -1308,7 +1373,7 @@ const HRM = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Human Resource Management</h1>
+      <h1 className="page-title">{t('humanResourceManagement')}</h1>
       
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 

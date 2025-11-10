@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import GlobalSearch from './GlobalSearch';
 import NotificationCenter from './NotificationCenter';
 import ThemeToggle from './ThemeToggle';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../context/LanguageContext';
 import '../styles/components/HorizontalNavbar.scss';
 
 // Material-UI Icons
@@ -59,6 +61,7 @@ const HorizontalNavbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const { user, logout, hasRole } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -86,7 +89,7 @@ const HorizontalNavbar = () => {
             <span className="brand-text">Claryx ERP</span>
           </Link>
           <div className="navbar-right">
-            <Link to="/login" className="nav-link-button">Login</Link>
+            <Link to="/login" className="nav-link-button">{t('login')}</Link>
           </div>
         </div>
       </nav>
@@ -122,9 +125,9 @@ const HorizontalNavbar = () => {
               onToggle={() => toggleDropdown('hr')}
               onClose={() => setOpenDropdown(null)}
             >
-              <Link to="/hrm" onClick={closeMenus}>Employee Management</Link>
-              <Link to="/attendance-system" onClick={closeMenus}>Attendance</Link>
-              <Link to="/checkin" onClick={closeMenus}>Check-In/Out</Link>
+              <Link to="/hrm" onClick={closeMenus}>👥 {t('employees')} Management</Link>
+              <Link to="/attendance-system" onClick={closeMenus}>📊 {t('attendance')}</Link>
+              <Link to="/checkin" onClick={closeMenus}>⏰ Check-In/Out</Link>
             </DropdownMenu>
 
             <DropdownMenu
@@ -134,11 +137,11 @@ const HorizontalNavbar = () => {
               onToggle={() => toggleDropdown('ops')}
               onClose={() => setOpenDropdown(null)}
             >
-              <Link to="/inventory-mgmt" onClick={closeMenus}>Inventory</Link>
+              <Link to="/inventory-mgmt" onClick={closeMenus}>📦 {t('inventory')}</Link>
               {hasRole(['admin', 'manager']) && (
                 <>
-                  <Link to="/procurement" onClick={closeMenus}>Procurement</Link>
-                  <Link to="/manufacturing" onClick={closeMenus}>Manufacturing</Link>
+                  <Link to="/procurement" onClick={closeMenus}>🛒 Procurement</Link>
+                  <Link to="/manufacturing" onClick={closeMenus}>🏭 Manufacturing</Link>
                 </>
               )}
             </DropdownMenu>
@@ -150,8 +153,8 @@ const HorizontalNavbar = () => {
               onToggle={() => toggleDropdown('sales')}
               onClose={() => setOpenDropdown(null)}
             >
-              <Link to="/sales-mgmt" onClick={closeMenus}>Sales Management</Link>
-              <Link to="/crm-system" onClick={closeMenus}>CRM System</Link>
+              <Link to="/sales-mgmt" onClick={closeMenus}>💰 {t('sales')} Management</Link>
+              <Link to="/crm-system" onClick={closeMenus}>🤝 CRM System</Link>
             </DropdownMenu>
 
             {hasRole(['admin', 'manager']) && (
@@ -162,7 +165,7 @@ const HorizontalNavbar = () => {
                 onToggle={() => toggleDropdown('finance')}
                 onClose={() => setOpenDropdown(null)}
               >
-                <Link to="/finance-mgmt" onClick={closeMenus}>Finance Management</Link>
+                <Link to="/finance-mgmt" onClick={closeMenus}>💳 {t('finance')} Management</Link>
               </DropdownMenu>
             )}
 
@@ -173,7 +176,7 @@ const HorizontalNavbar = () => {
               onToggle={() => toggleDropdown('projects')}
               onClose={() => setOpenDropdown(null)}
             >
-              <Link to="/projects" onClick={closeMenus}>Projects</Link>
+              <Link to="/projects" onClick={closeMenus}>📋 {t('projects')}</Link>
             </DropdownMenu>
 
             <DropdownMenu
@@ -183,11 +186,11 @@ const HorizontalNavbar = () => {
               onToggle={() => toggleDropdown('tools')}
               onClose={() => setOpenDropdown(null)}
             >
-              <Link to="/calendar-system" onClick={closeMenus}>Calendar</Link>
-              <Link to="/helpdesk" onClick={closeMenus}>Helpdesk</Link>
-              <Link to="/ai-assistant" onClick={closeMenus}>AI Assistant</Link>
+              <Link to="/calendar-system" onClick={closeMenus}>📅 {t('calendar')}</Link>
+              <Link to="/helpdesk" onClick={closeMenus}>🎧 Helpdesk</Link>
+              <Link to="/ai-assistant" onClick={closeMenus}>🤖 AI Assistant</Link>
               {hasRole(['admin', 'manager']) && (
-                <Link to="/ai-insights" onClick={closeMenus}>AI Insights</Link>
+                <Link to="/ai-insights" onClick={closeMenus}>📈 AI Insights</Link>
               )}
             </DropdownMenu>
 
@@ -199,9 +202,9 @@ const HorizontalNavbar = () => {
                 onToggle={() => toggleDropdown('admin')}
                 onClose={() => setOpenDropdown(null)}
               >
-                <Link to="/admin-panel" onClick={closeMenus}>Admin Panel</Link>
-                <Link to="/system-config" onClick={closeMenus}>System Config</Link>
-                <Link to="/integrations" onClick={closeMenus}>Integrations</Link>
+                <Link to="/admin-panel" onClick={closeMenus}>⚙️ Admin Panel</Link>
+                <Link to="/system-config" onClick={closeMenus}>🔧 System Config</Link>
+                <Link to="/integrations" onClick={closeMenus}>🔗 Integrations</Link>
               </DropdownMenu>
             )}
           </div>
@@ -244,13 +247,17 @@ const HorizontalNavbar = () => {
                     <DarkModeIcon fontSize="small" /> Dark Mode
                     <ThemeToggle />
                   </div>
+                  <div className="user-menu-item-inline">
+                    🌍 Language
+                    <LanguageSelector />
+                  </div>
                   <div className="user-menu-divider"></div>
                   <Link to="/profile-system" onClick={closeMenus}>
-                    <SettingsIcon fontSize="small" /> Settings
+                    <SettingsIcon fontSize="small" /> {t('settings')}
                   </Link>
                   <div className="user-menu-divider"></div>
                   <button onClick={handleLogout}>
-                    <LogoutIcon fontSize="small" /> Logout
+                    <LogoutIcon fontSize="small" /> {t('logout')}
                   </button>
                 </div>
               )}

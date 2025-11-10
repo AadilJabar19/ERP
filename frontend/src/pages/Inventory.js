@@ -3,7 +3,9 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import ActionDropdown from '../components/ActionDropdown';
+import Pagination from '../components/Pagination';
 import useBulkActions from '../hooks/useBulkActions';
+import usePagination from '../hooks/usePagination';
 
 const Inventory = () => {
   const { hasRole } = useAuth();
@@ -21,6 +23,8 @@ const Inventory = () => {
     minStock: '',
     supplier: ''
   });
+  
+  const productsPagination = usePagination(products);
 
   useEffect(() => {
     fetchProducts();
@@ -226,55 +230,67 @@ const Inventory = () => {
             )}
           </div>
         </div>
-        <div className="table-container">
-          <table className="table">
-          <thead>
-            <tr>
-              <th>
-                <input 
-                  type="checkbox" 
-                  checked={selectAll}
-                  onChange={(e) => handleSelectAll(e, products)}
-                />
-              </th>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Quantity</th>
-              <th>Min Stock</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(product => (
-              <tr key={product._id}>
-                <td>
+        <>
+          <div className="table-container">
+            <table className="table">
+            <thead>
+              <tr>
+                <th>
                   <input 
                     type="checkbox" 
-                    checked={selectedItems.includes(product._id)}
-                    onChange={(e) => handleSelectItem(e, product._id)}
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, products)}
                   />
-                </td>
-                <td>{product.productId}</td>
-                <td>{product.name}</td>
-                <td>{product.category}</td>
-                <td>${product.price}</td>
-                <td>{product.quantity}</td>
-                <td>{product.minStock}</td>
-                <td>
-                  <span style={{
-                    color: product.quantity <= product.minStock ? 'red' : 'green',
-                    fontWeight: 'bold'
-                  }}>
-                    {product.quantity <= product.minStock ? 'Low Stock' : 'In Stock'}
-                  </span>
-                </td>
+                </th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Min Stock</th>
+                <th>Status</th>
               </tr>
-            ))}
-          </tbody>
-          </table>
-        </div>
+            </thead>
+            <tbody>
+              {productsPagination.paginatedData.map(product => (
+                <tr key={product._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(product._id)}
+                      onChange={(e) => handleSelectItem(e, product._id)}
+                    />
+                  </td>
+                  <td>{product.productId}</td>
+                  <td>{product.name}</td>
+                  <td>{product.category}</td>
+                  <td>${product.price}</td>
+                  <td>{product.quantity}</td>
+                  <td>{product.minStock}</td>
+                  <td>
+                    <span style={{
+                      color: product.quantity <= product.minStock ? 'red' : 'green',
+                      fontWeight: 'bold'
+                    }}>
+                      {product.quantity <= product.minStock ? 'Low Stock' : 'In Stock'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            </table>
+          </div>
+          <Pagination
+            currentPage={productsPagination.currentPage}
+            totalPages={productsPagination.totalPages}
+            onPageChange={productsPagination.goToPage}
+            totalItems={productsPagination.totalItems}
+            startIndex={productsPagination.startIndex}
+            endIndex={productsPagination.endIndex}
+            itemsPerPage={productsPagination.itemsPerPage}
+            onItemsPerPageChange={productsPagination.changeItemsPerPage}
+          />
+        </>
       </div>
     </div>
   );

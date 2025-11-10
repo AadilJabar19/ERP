@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Badge } from './ui';
+import PDFExport from './PDFExport';
 import '../styles/components/BulkActions.scss';
 
 const BulkActions = ({ 
@@ -33,14 +34,22 @@ const BulkActions = ({
       )}
       
       {onBulkExport && (
-        <Button 
-          variant="success"
-          size="sm"
-          onClick={onBulkExport}
-          icon="📥"
-        >
-          Export
-        </Button>
+        <>
+          <Button 
+            variant="success"
+            size="sm"
+            onClick={onBulkExport}
+            icon="📊"
+          >
+            Export Excel
+          </Button>
+          <PDFExport 
+            elementId="data-table"
+            filename={`export-${new Date().toISOString().split('T')[0]}.pdf`}
+          >
+            📄 Export PDF
+          </PDFExport>
+        </>
       )}
       
       {onBulkDelete && (

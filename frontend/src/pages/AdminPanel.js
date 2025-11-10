@@ -200,25 +200,32 @@ const AdminPanel = () => {
         
         <div className="card">
           <h4>🥧 User Roles Distribution</h4>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={systemStats.roleDistribution || []}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {(systemStats.roleDistribution || []).map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={['#3498db', '#e74c3c', '#f39c12'][index % 3]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          {(systemStats.roleDistribution || []).length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={systemStats.roleDistribution || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={true}
+                  label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                  outerRadius={60}
+                  innerRadius={20}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {(systemStats.roleDistribution || []).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#3498db', '#e74c3c', '#f39c12'][index % 3]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <p>No role distribution data available</p>
+            </div>
+          )}
         </div>
         
         <div className="card">

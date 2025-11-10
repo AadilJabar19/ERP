@@ -1,4 +1,5 @@
 import React from 'react';
+import SearchIcon from '@mui/icons-material/Search';
 import '../styles/components/SearchFilter.scss';
 
 const SearchFilter = ({ 
@@ -11,7 +12,7 @@ const SearchFilter = ({
 }) => (
   <div className="search-filter-container">
     <div className="search-input-wrapper">
-      <span className="search-icon">🔍</span>
+      <SearchIcon className="search-icon" />
       <input
         type="text"
         placeholder={placeholder}

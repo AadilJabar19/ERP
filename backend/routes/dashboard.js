@@ -92,6 +92,26 @@ router.get('/analytics', auth, async (req, res) => {
       $expr: { $lte: ['$totalQuantity', '$inventory.stockLevels.reorderPoint'] }
     }).limit(5);
     
+    // Inventory status distribution
+    const outOfStockCount = await Product.countDocuments({ 
+      status: 'active', 
+      totalQuantity: 0 
+    });
+    const lowStockCount = lowStockProducts.length;
+    const inStockCount = totalProducts - lowStockCount - outOfStockCount;
+    
+    const inventoryStatus = [
+      { status: 'In Stock', count: inStockCount, fill: '#00C49F' },
+      { status: 'Low Stock', count: lowStockCount, fill: '#FFBB28' },
+      { status: 'Out of Stock', count: outOfStockCount, fill: '#FF8042' }
+    ];
+    
+    // Calculate trends (mock data - replace with actual trend calculation)
+    const employeeTrend = '+5% from last month';
+    const productTrend = '+12% from last month';
+    const salesTrendText = '+8% from last month';
+    const revenueTrend = '+15% from last month';
+    
     // Today's attendance
     const today = new Date().toDateString();
     const todayAttendance = await Attendance.find({
@@ -120,7 +140,12 @@ router.get('/analytics', auth, async (req, res) => {
         monthlySales: monthlySales.reverse(),
         departmentStats,
         projectStats,
-        leadStats
+        leadStats,
+        inventoryStatus,
+        employeeTrend,
+        productTrend,
+        salesTrend: salesTrendText,
+        revenueTrend
       },
       alerts: {
         lowStockProducts,

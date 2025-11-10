@@ -3,6 +3,23 @@ import { useDashboardAnalytics } from '../hooks/useQueryHooks';
 import { Card, Badge, EmptyState } from '../components/ui';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ActivityTimeline from '../components/ActivityTimeline';
+import PDFExport from '../components/PDFExport';
+import PeopleIcon from '@mui/icons-material/People';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import EventIcon from '@mui/icons-material/Event';
+import WarningIcon from '@mui/icons-material/Warning';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { useLanguage } from '../context/LanguageContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
 import '../styles/pages/Dashboard.scss';
 
@@ -23,6 +40,7 @@ const StatCard = ({ icon, title, value, trend, color }) => (
 
 const Dashboard = () => {
   const { data, isLoading, error } = useDashboardAnalytics();
+  const { t } = useLanguage();
 
   const chartData = useMemo(() => {
     if (!data) return null;
@@ -34,53 +52,12 @@ const Dashboard = () => {
         employees: dept.count,
         fill: ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'][index % 5]
       })) || [],
-      inventoryStatus: [
-        { 
-          status: 'In Stock', 
-          count: data.overview?.totalProducts - (data.alerts?.lowStockProducts?.length || 0), 
-          fill: '#00C49F' 
-        },
-        { 
-          status: 'Low Stock', 
-          count: data.alerts?.lowStockProducts?.length || 0, 
-          fill: '#FFBB28' 
-        },
-        { 
-          status: 'Out of Stock', 
-          count: 0, 
-          fill: '#FF8042' 
-        }
-      ],
+      inventoryStatus: data.trends?.inventoryStatus || [],
       revenueByMonth: data.trends?.monthlySales || []
     };
   }, [data]);
 
-  const recentActivity = useMemo(() => {
-    if (!data) return [];
 
-    const activities = [
-      ...(data.recentActivity?.recentSales?.map(sale => ({
-        type: 'Sale',
-        description: `Sale to ${sale.customer?.companyName || 'Customer'} - $${sale.totalAmount}`,
-        timestamp: new Date(sale.saleDate),
-        variant: 'success'
-      })) || []),
-      ...(data.recentActivity?.recentLeads?.map(lead => ({
-        type: 'Lead',
-        description: `New lead: ${lead.contact?.company || 'Company'} - ${lead.status}`,
-        timestamp: new Date(lead.createdAt),
-        variant: 'info'
-      })) || []),
-      ...(data.alerts?.lowStockProducts?.map(product => ({
-        type: 'Inventory',
-        description: `Low stock alert - ${product.name}`,
-        timestamp: new Date(),
-        variant: 'warning'
-      })) || [])
-    ];
-
-    return activities.slice(0, 5);
-  }, [data]);
 
   if (isLoading) {
     return (
@@ -94,7 +71,7 @@ const Dashboard = () => {
     return (
       <div className="page-container">
         <EmptyState 
-          icon="⚠️"
+          icon={<WarningIcon />}
           title="Error Loading Dashboard"
           description="There was an error loading the dashboard data. Please try again."
         />
@@ -105,44 +82,48 @@ const Dashboard = () => {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1 className="page-title">Dashboard</h1>
+        <h1 className="page-title">{t('dashboard')}</h1>
+        <PDFExport elementId="dashboard-content" filename="dashboard-report.pdf">
+          <BarChartIcon /> Export Dashboard
+        </PDFExport>
       </div>
 
+      <div id="dashboard-content">
       {/* Stats Grid */}
       <div className="stats-grid">
         <StatCard
-          icon="👥"
-          title="Total Employees"
+          icon={<PeopleIcon />}
+          title={t('totalEmployees')}
           value={data?.overview?.totalEmployees || 0}
-          trend="+5% from last month"
+          trend={data?.trends?.employeeTrend || null}
           color="#3498db"
         />
         <StatCard
-          icon="📦"
-          title="Total Products"
+          icon={<InventoryIcon />}
+          title={t('totalProducts')}
           value={data?.overview?.totalProducts || 0}
-          trend="+12% from last month"
+          trend={data?.trends?.productTrend || null}
           color="#2ecc71"
         />
         <StatCard
-          icon="💰"
-          title="Total Sales"
+          icon={<AttachMoneyIcon />}
+          title={t('totalSales')}
           value={data?.overview?.totalSales || 0}
-          trend="+8% from last month"
+          trend={data?.trends?.salesTrend || null}
           color="#e74c3c"
         />
         <StatCard
-          icon="📈"
-          title="Total Revenue"
+          icon={<TrendingUpIcon />}
+          title={t('totalRevenue')}
           value={`$${(data?.overview?.totalRevenue || 0).toFixed(2)}`}
-          trend="+15% from last month"
+          trend={data?.trends?.revenueTrend || null}
           color="#f39c12"
         />
       </div>
 
       {/* Charts Grid */}
       <div className="charts-grid">
-        <Card title="Sales & Revenue Trend">
+        <Card title={<><TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('salesRevenueTrend')}</>}>
           {chartData?.salesTrend?.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData.salesTrend}>
@@ -157,14 +138,14 @@ const Dashboard = () => {
             </ResponsiveContainer>
           ) : (
             <EmptyState 
-              icon="📊"
+              icon={<BarChartIcon />}
               title="No sales data"
               description="Sales data will appear here once you start making sales"
             />
           )}
         </Card>
 
-        <Card title="Department Distribution">
+        <Card title={<><PieChartIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('departmentDistribution')}</>}>
           {chartData?.departmentStats?.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -187,14 +168,14 @@ const Dashboard = () => {
             </ResponsiveContainer>
           ) : (
             <EmptyState 
-              icon="👥"
+              icon={<PeopleIcon />}
               title="No department data"
               description="Department distribution will appear here"
             />
           )}
         </Card>
 
-        <Card title="Inventory Status">
+        <Card title={<><InventoryIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('inventoryStatus')}</>}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData?.inventoryStatus}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -210,7 +191,7 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </Card>
 
-        <Card title="Monthly Revenue">
+        <Card title={<><AttachMoneyIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('monthlyRevenue')}</>}>
           {chartData?.revenueByMonth?.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData.revenueByMonth}>
@@ -223,45 +204,203 @@ const Dashboard = () => {
             </ResponsiveContainer>
           ) : (
             <EmptyState 
-              icon="💰"
+              icon={<AttachMoneyIcon />}
               title="No revenue data"
               description="Revenue data will appear here"
             />
           )}
         </Card>
+
+        <Card title={<><AssessmentIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('leadPipelineStatus')}</>} className="lead-chart-card">
+          {data?.trends?.leadStats?.length > 0 ? (
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={data.trends.leadStats.map((lead, index) => ({ 
+                  name: lead._id, 
+                  count: lead.count,
+                  fill: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index % 5]
+                }))} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }} 
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {data.trends.leadStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index % 5]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState 
+              icon={<WarningIcon />}
+              title="No lead data"
+              description="Lead pipeline data will appear here"
+            />
+          )}
+        </Card>
+
+        <Card title={<><BarChartIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('projectStatusDistribution')}</>} className="project-chart-card">
+          {data?.trends?.projectStats?.length > 0 ? (
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={data.trends.projectStats.map((project, index) => ({
+                      name: project._id,
+                      value: project.count,
+                      fill: ['#059669', '#DC2626', '#D97706', '#7C3AED', '#0891B2'][index % 5]
+                    }))}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                    outerRadius={90}
+                    dataKey="value"
+                    stroke="#fff"
+                    strokeWidth={2}
+                  >
+                    {data.trends.projectStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={['#059669', '#DC2626', '#D97706', '#7C3AED', '#0891B2'][index % 5]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }} 
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState 
+              icon={<AssessmentIcon />}
+              title="No project data"
+              description="Project status data will appear here"
+            />
+          )}
+        </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card title="Recent Activity" className="activity-card">
-        {recentActivity.length > 0 ? (
-          <ul className="activity-list">
-            {recentActivity.map((activity, index) => (
-              <li key={index} className="activity-item">
-                <div className="activity-content">
-                  <Badge variant={activity.variant} size="sm">
-                    {activity.type}
-                  </Badge>
-                  <span className="activity-description">{activity.description}</span>
+      {/* Secondary Stats Grid */}
+      <div className="secondary-stats-grid">
+        <Card title={<><AssessmentIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('projectStatus')}</>} className="project-status-card">
+          {data?.trends?.projectStats?.length > 0 ? (
+            <div className="status-grid">
+              {data.trends.projectStats.map((status, index) => (
+                <div key={index} className="status-item">
+                  <div className="status-count">{status.count}</div>
+                  <div className="status-label">{status._id}</div>
                 </div>
-                <span className="activity-time">
-                  {new Date(activity.timestamp).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState 
-            icon="📋"
-            title="No recent activity"
-            description="Activity will appear here once you start using the system"
-          />
-        )}
-      </Card>
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon={<AssessmentIcon />} title="No projects" description="Project status will appear here" />
+          )}
+        </Card>
+
+
+
+        <Card title={<><AccessTimeIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('todaysAttendance')}</>} className="attendance-card">
+          {data?.alerts?.todayAttendance ? (
+            <div className="attendance-stats">
+              <div className="attendance-item present">
+                <div className="attendance-count">{data.alerts.todayAttendance.present}</div>
+                <div className="attendance-label">{t('present')}</div>
+              </div>
+              <div className="attendance-item late">
+                <div className="attendance-count">{data.alerts.todayAttendance.late}</div>
+                <div className="attendance-label">{t('late')}</div>
+              </div>
+              <div className="attendance-item total">
+                <div className="attendance-count">{data.alerts.todayAttendance.total}</div>
+                <div className="attendance-label">{t('total')}</div>
+              </div>
+            </div>
+          ) : (
+            <EmptyState icon={<PeopleIcon />} title="No attendance" description="Today's attendance will appear here" />
+          )}
+        </Card>
+      </div>
+
+      {/* Additional Info Grid */}
+      <div className="info-grid">
+        <Card title={<><CalendarTodayIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('upcomingEvents')}</>} className="events-card">
+          {data?.upcomingEvents?.length > 0 ? (
+            <ul className="events-list">
+              {data.upcomingEvents.slice(0, 4).map((event, index) => (
+                <li key={index} className="event-item">
+                  <div className="event-date">
+                    {new Date(event.startDate).toLocaleDateString()}
+                  </div>
+                  <div className="event-details">
+                    <div className="event-title">{event.title}</div>
+                    <div className="event-type">{event.type}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon={<EventIcon />} title="No upcoming events" description="Events will appear here" />
+          )}
+        </Card>
+
+        <Card title={<><NotificationsIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('stockAlerts')}</>} className="alerts-card">
+          {data?.alerts?.lowStockProducts?.length > 0 ? (
+            <ul className="alerts-list">
+              {data.alerts.lowStockProducts.slice(0, 4).map((product, index) => (
+                <li key={index} className="alert-item">
+                  <Badge variant="warning" size="sm">{t('lowStock')}</Badge>
+                  <div className="alert-details">
+                    <div className="alert-title">{product.name}</div>
+                    <div className="alert-quantity">Qty: {product.totalQuantity}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon={<CheckCircleIcon />} title={t('allStockGood')} description={t('noLowStockAlerts')} />
+          )}
+        </Card>
+
+        <Card title={<><DashboardIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('quickStats')}</>} className="quick-stats-card">
+          <div className="quick-stats-grid">
+            <div className="quick-stat">
+              <div className="quick-stat-value">{data?.overview?.totalCustomers || 0}</div>
+              <div className="quick-stat-label">{t('customers')}</div>
+            </div>
+            <div className="quick-stat">
+              <div className="quick-stat-value">{data?.overview?.totalProjects || 0}</div>
+              <div className="quick-stat-label">{t('projects')}</div>
+            </div>
+            <div className="quick-stat">
+              <div className="quick-stat-value">{data?.upcomingEvents?.length || 0}</div>
+              <div className="quick-stat-label">{t('events')}</div>
+            </div>
+            <div className="quick-stat">
+              <div className="quick-stat-value">{data?.alerts?.lowStockProducts?.length || 0}</div>
+              <div className="quick-stat-label">{t('alerts')}</div>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* Activity Timeline */}
-      <Card title="📜 Recent Activity" className="activity-timeline-card">
+      <Card title={<><TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t('recentActivity')}</>} className="activity-timeline-card" hoverable>
         <ActivityTimeline limit={15} />
       </Card>
+      </div>
     </div>
   );
 };

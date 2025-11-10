@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import SearchIcon from '@mui/icons-material/Search';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import '../styles/components/GlobalSearch.scss';
 
 const GlobalSearch = () => {
@@ -8,6 +10,8 @@ const GlobalSearch = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [recentSearches, setRecentSearches] = useState([]);
   const searchRef = useRef(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
@@ -105,7 +109,7 @@ const GlobalSearch = () => {
         className="global-search-trigger"
         onClick={() => setIsOpen(true)}
       >
-        <span className="search-icon">🔍</span>
+        <SearchIcon className="search-icon" />
         <span className="search-text">Search...</span>
         <span className="search-shortcut">⌘K</span>
       </button>
@@ -114,7 +118,7 @@ const GlobalSearch = () => {
         <div className="global-search-overlay">
           <div className="global-search-modal" ref={searchRef}>
             <div className="search-input-wrapper">
-              <span className="search-icon-large">🔍</span>
+              <SearchIcon className="search-icon-large" />
               <input
                 ref={inputRef}
                 type="text"
@@ -123,13 +127,13 @@ const GlobalSearch = () => {
                 onChange={(e) => setQuery(e.target.value)}
                 className="global-search-input"
               />
-              {loading && <span className="search-loading">⏳</span>}
+              {loading && <AccessTimeIcon className="search-loading" />}
             </div>
 
             <div className="search-results">
               {query && !loading && results.length === 0 && (
                 <div className="search-empty">
-                  <span className="empty-icon">🔍</span>
+                  <SearchIcon className="empty-icon" />
                   <p>No results found for "{query}"</p>
                 </div>
               )}
@@ -155,6 +159,33 @@ const GlobalSearch = () => {
 
               {!query && (
                 <div className="search-suggestions">
+                  <div className="search-filters">
+                    <button 
+                      className={`filter-btn ${selectedFilter === 'all' ? 'active' : ''}`}
+                      onClick={() => setSelectedFilter('all')}
+                    >
+                      All
+                    </button>
+                    <button 
+                      className={`filter-btn ${selectedFilter === 'employees' ? 'active' : ''}`}
+                      onClick={() => setSelectedFilter('employees')}
+                    >
+                      👥 Employees
+                    </button>
+                    <button 
+                      className={`filter-btn ${selectedFilter === 'products' ? 'active' : ''}`}
+                      onClick={() => setSelectedFilter('products')}
+                    >
+                      📦 Products
+                    </button>
+                    <button 
+                      className={`filter-btn ${selectedFilter === 'customers' ? 'active' : ''}`}
+                      onClick={() => setSelectedFilter('customers')}
+                    >
+                      🏢 Customers
+                    </button>
+                  </div>
+                  
                   <div className="suggestion-title">Quick Links</div>
                   <button className="suggestion-item" onClick={() => navigate('/dashboard')}>
                     <span>📊</span> Dashboard

@@ -3,7 +3,9 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import ActionDropdown from '../components/ActionDropdown';
+import Pagination from '../components/Pagination';
 import useBulkActions from '../hooks/useBulkActions';
+import usePagination from '../hooks/usePagination';
 
 const Sales = () => {
   const { hasRole } = useAuth();
@@ -26,6 +28,8 @@ const Sales = () => {
     }],
     totalAmount: 0
   });
+  
+  const salesPagination = usePagination(sales);
 
   useEffect(() => {
     fetchSales();
@@ -261,46 +265,58 @@ const Sales = () => {
             />
           )}
         </div>
-        <div className="table-container">
-          <table className="table">
-          <thead>
-            <tr>
-              <th>
-                <input 
-                  type="checkbox" 
-                  checked={selectAll}
-                  onChange={(e) => handleSelectAll(e, sales)}
-                />
-              </th>
-              <th>Sale ID</th>
-              <th>Customer</th>
-              <th>Items</th>
-              <th>Total Amount</th>
-              <th>Status</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.map(sale => (
-              <tr key={sale._id}>
-                <td>
+        <>
+          <div className="table-container">
+            <table className="table">
+            <thead>
+              <tr>
+                <th>
                   <input 
                     type="checkbox" 
-                    checked={selectedItems.includes(sale._id)}
-                    onChange={(e) => handleSelectItem(e, sale._id)}
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e, sales)}
                   />
-                </td>
-                <td>{sale.saleId}</td>
-                <td>{sale.customer?.name || 'N/A'}</td>
-                <td>{sale.items.length} items</td>
-                <td>${sale.totalAmount}</td>
-                <td>{sale.status}</td>
-                <td>{sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : 'N/A'}</td>
+                </th>
+                <th>Sale ID</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+                <th>Date</th>
               </tr>
-            ))}
-          </tbody>
-          </table>
-        </div>
+            </thead>
+            <tbody>
+              {salesPagination.paginatedData.map(sale => (
+                <tr key={sale._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(sale._id)}
+                      onChange={(e) => handleSelectItem(e, sale._id)}
+                    />
+                  </td>
+                  <td>{sale.saleId}</td>
+                  <td>{sale.customer?.name || 'N/A'}</td>
+                  <td>{sale.items.length} items</td>
+                  <td>${sale.totalAmount}</td>
+                  <td>{sale.status}</td>
+                  <td>{sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : 'N/A'}</td>
+                </tr>
+              ))}
+            </tbody>
+            </table>
+          </div>
+          <Pagination
+            currentPage={salesPagination.currentPage}
+            totalPages={salesPagination.totalPages}
+            onPageChange={salesPagination.goToPage}
+            totalItems={salesPagination.totalItems}
+            startIndex={salesPagination.startIndex}
+            endIndex={salesPagination.endIndex}
+            itemsPerPage={salesPagination.itemsPerPage}
+            onItemsPerPageChange={salesPagination.changeItemsPerPage}
+          />
+        </>
       </div>
     </div>
   );

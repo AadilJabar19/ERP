@@ -10,10 +10,12 @@ import CSVUpload from '../components/CSVUpload';
 import { Button } from '../components/ui';
 import useBulkActions from '../hooks/useBulkActions';
 import '../styles/pages/Projects.scss';
+import { useLanguage } from '../context/LanguageContext';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Projects = () => {
   const { hasRole } = useAuth();
+  const { t } = useLanguage();
   const { success, error, showConfirm } = useToast();
   const { selectedItems, selectAll, handleSelectAll, handleSelectItem, clearSelection } = useBulkActions();
   const [projects, setProjects] = useState([]);
@@ -241,7 +243,7 @@ const Projects = () => {
           </Button>
           {hasRole(['admin', 'manager']) && (
             <Button variant="primary" icon="➕" onClick={() => setShowModal(true)}>
-              Add Project
+              {t('addNew')} {t('projects')}
             </Button>
           )}
         </div>
@@ -249,7 +251,7 @@ const Projects = () => {
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0 }}>Projects Overview</h3>
+          <h3 style={{ margin: 0 }}>{t('projects')} Overview</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {selectedItems.length > 0 && (
               <ActionDropdown
@@ -517,7 +519,7 @@ const Projects = () => {
   
   return (
     <div className="page-container">
-      <h1 className="page-title">Project Management</h1>
+      <h1 className="page-title">{t('projectManagement')}</h1>
       
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 
@@ -541,7 +543,7 @@ const Projects = () => {
       {activeTab === 'projects' && renderProjects()}
       {activeTab === 'analytics' && renderAnalytics()}
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New Project">
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={`${t('addNew')} ${t('projects')}`}>
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group">

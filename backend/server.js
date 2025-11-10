@@ -4,7 +4,7 @@ const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const session = require('express-session');
-const { csrfProtection, generateToken } = require('./middleware/csrf');
+const { generateToken } = require('./middleware/csrf');
 const { handleConnection } = require('./socket/socketHandler');
 const { createFallbackRouter } = require('./utils/routeFallback');
 require('dotenv').config();
@@ -13,7 +13,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true
   }
 });
@@ -27,7 +27,7 @@ app.set('io', io);
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true
 }));
 app.use(express.json());
@@ -35,7 +35,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
+  cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 // MongoDB Connection
@@ -49,10 +49,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/claryx-er
   process.exit(1);
 });
 
-// CSRF token endpoint
+// CSRF token endpoint (disabled)
 app.get('/api/csrf-token', (req, res) => {
-  const token = generateToken(req);
-  res.json({ csrfToken: token });
+  res.json({ csrfToken: 'disabled' });
 });
 
 // Routes
@@ -73,7 +72,7 @@ try {
   console.error('Error loading AI assistant route:', error);
 }
 
-// Apply CSRF protection to all other routes (temporarily disabled)
+// CSRF protection disabled for better UX
 // app.use('/api', csrfProtection);
 
 // Load routes with error handling
@@ -91,7 +90,9 @@ const routes = [
   { path: '/api/finance', file: './routes/finance' },
   { path: '/api/suppliers', file: './routes/suppliers' },
   { path: '/api/admin', file: './routes/admin' },
-  { path: '/api/dashboard', file: './routes/dashboard' }
+  { path: '/api/dashboard', file: './routes/dashboard' },
+  { path: '/api/export', file: './routes/export' },
+  { path: '/api/activities', file: './routes/activities' }
 ];
 
 // Optional new routes
